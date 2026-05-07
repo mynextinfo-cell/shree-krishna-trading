@@ -1,0 +1,40 @@
+const nseStocks = [
+
+  'RELIANCE',
+  'TCS',
+  'INFY',
+  'SBIN',
+  'HDFCBANK',
+  'ICICIBANK',
+  'ITC',
+  'LT',
+  'WIPRO',
+  'AXISBANK',
+  'BAJFINANCE',
+  'KOTAKBANK',
+  'MARUTI',
+  'SUNPHARMA',
+  'TITAN',
+  'ULTRACEMCO',
+  'POWERGRID',
+  'NTPC',
+  'ONGC',
+  'ADANIENT',
+  'ADANIPORTS',
+  'ASIANPAINT',
+  'BHARTIARTL',
+  'BPCL',
+  'CIPLA',
+  'COALINDIA',
+  'DRREDDY',
+  'HCLTECH',
+  'HINDUNILVR',
+  'JSWSTEEL',
+  'TATAMOTORS',
+  'TATASTEEL',
+  'TECHM',
+  'VEDL'
+
+]
+
+export default nseStocks
