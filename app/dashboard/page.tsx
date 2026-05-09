@@ -134,54 +134,66 @@ export default function DashboardPage() {
   const saveTrade = async () => {
 
     if (!user) {
+
       alert("Please login first");
+
       return;
     }
 
-    // UPLOAD IMAGE
-    const imageUrl =
-      await uploadImage();
+    try {
 
-    const { error } = await supabase
-      .from("trades")
-      .insert([
-        {
-          stock_name: stockName,
-          strategy_name: strategyName,
-          trade_type: tradeType,
-          buy_date: buyDate,
-          sell_date: sellDate,
-          quantity: quantity,
-          buy_price: buyPrice,
-          sell_price: sellPrice,
-          notes: notes,
-          screenshot: imageUrl,
-          user_id: user.id,
-        },
-      ]);
+      // UPLOAD IMAGE
+      const imageUrl =
+        await uploadImage();
 
-    if (error) {
+      const { error } = await supabase
+        .from("trades")
+        .insert([
+          {
+            stock_name: stockName,
+            strategy_name: strategyName,
+            trade_type: tradeType,
+            buy_date: buyDate,
+            sell_date: sellDate,
+            quantity: Number(quantity),
+            buy_price: Number(buyPrice),
+            sell_price: Number(sellPrice),
+            notes: notes,
+            screenshot: imageUrl,
+            user_id: user.id,
+          },
+        ]);
 
-      console.log(error);
-      alert(error.message);
+      if (error) {
 
-    } else {
+        console.log(error);
 
-      alert("Trade Saved Successfully ✅");
+        alert(JSON.stringify(error));
 
-      fetchTrades();
+      } else {
 
-      // CLEAR FORM
-      setStockName("");
-      setStrategyName("");
-      setTradeType("BUY");
-      setBuyDate("");
-      setSellDate("");
-      setQuantity("");
-      setBuyPrice("");
-      setSellPrice("");
-      setNotes("");
-      setScreenshot(null);
+        alert("Trade Saved Successfully ✅");
+
+        fetchTrades();
+
+        // CLEAR FORM
+        setStockName("");
+        setStrategyName("");
+        setTradeType("BUY");
+        setBuyDate("");
+        setSellDate("");
+        setQuantity("");
+        setBuyPrice("");
+        setSellPrice("");
+        setNotes("");
+        setScreenshot(null);
+      }
+
+    } catch (err: any) {
+
+      console.log(err);
+
+      alert(err.message);
     }
   };
 
@@ -518,137 +530,6 @@ export default function DashboardPage() {
             </button>
 
           </div>
-
-        </div>
-
-        {/* TRADE HISTORY */}
-        <div className="mt-14 bg-[#050816] border border-zinc-900 rounded-3xl p-6 md:p-8 overflow-x-auto">
-
-          <h2 className="text-3xl font-bold mb-8">
-            Trade History
-          </h2>
-
-          <table className="w-full min-w-[900px]">
-
-            <thead className="border-b border-zinc-800 text-zinc-400">
-
-              <tr>
-
-                <th className="text-left p-4">
-                  Stock
-                </th>
-
-                <th className="text-left p-4">
-                  Strategy
-                </th>
-
-                <th className="text-left p-4">
-                  Type
-                </th>
-
-                <th className="text-left p-4">
-                  Qty
-                </th>
-
-                <th className="text-left p-4">
-                  Buy
-                </th>
-
-                <th className="text-left p-4">
-                  Sell
-                </th>
-
-                <th className="text-left p-4">
-                  Screenshot
-                </th>
-
-                <th className="text-left p-4">
-                  P/L
-                </th>
-
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              {trades.map((trade) => {
-
-                const pnl =
-                  (
-                    Number(trade.sell_price || 0) -
-                    Number(trade.buy_price || 0)
-                  ) *
-                  Number(trade.quantity || 0);
-
-                return (
-
-                  <tr
-                    key={trade.id}
-                    className="border-b border-zinc-900 hover:bg-zinc-900/40 transition"
-                  >
-
-                    <td className="p-4">
-                      {trade.stock_name}
-                    </td>
-
-                    <td className="p-4">
-                      {trade.strategy_name}
-                    </td>
-
-                    <td className="p-4">
-                      {trade.trade_type}
-                    </td>
-
-                    <td className="p-4">
-                      {trade.quantity}
-                    </td>
-
-                    <td className="p-4">
-                      ₹{trade.buy_price}
-                    </td>
-
-                    <td className="p-4">
-                      ₹{trade.sell_price}
-                    </td>
-
-                    {/* SCREENSHOT */}
-                    <td className="p-4">
-
-                      {trade.screenshot ? (
-
-                        <a
-                          href={trade.screenshot}
-                          target="_blank"
-                          className="text-violet-400 underline"
-                        >
-                          View
-                        </a>
-
-                      ) : (
-
-                        "N/A"
-                      )}
-
-                    </td>
-
-                    <td
-                      className={`p-4 font-bold ${
-                        pnl >= 0
-                          ? "text-green-400"
-                          : "text-red-400"
-                      }`}
-                    >
-                      ₹{pnl.toFixed(2)}
-                    </td>
-
-                  </tr>
-                );
-              })}
-
-            </tbody>
-
-          </table>
 
         </div>
 
