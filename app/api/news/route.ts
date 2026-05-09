@@ -1,46 +1,34 @@
-import { NextResponse } from 'next/server'
-
 export async function GET() {
 
-  try {
+  return Response.json([
+    {
+      title:
+        "NIFTY closes higher amid strong buying in banking stocks",
 
-    const response = await fetch(
+      source: "Moneycontrol",
 
-      'https://newsapi.org/v2/top-headlines?category=business&country=in&apiKey=603d7bd090c4435eab6cb9b24e31096d',
+      link:
+        "https://www.moneycontrol.com",
+    },
 
-      {
-        cache: 'no-store',
-      }
+    {
+      title:
+        "Bitcoin crosses major resistance zone",
 
-    )
+      source: "CoinDesk",
 
-    const data =
-      await response.json()
+      link:
+        "https://www.coindesk.com",
+    },
 
-    return NextResponse.json({
+    {
+      title:
+        "Global markets rally on cooling inflation data",
 
-      success: true,
+      source: "Bloomberg",
 
-      articles:
-        data.articles || [],
-
-    })
-
-  } catch (error) {
-
-    console.log(error)
-
-    return NextResponse.json({
-
-      success: false,
-
-      articles: [],
-
-      message:
-        'Failed to fetch news',
-
-    })
-
-  }
-
+      link:
+        "https://www.bloomberg.com",
+    },
+  ]);
 }

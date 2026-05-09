@@ -16,6 +16,8 @@ import Sidebar from "@/components/Sidebar";
 import MarketOverview from "@/components/MarketOverview";
 import AnalyticsChart from "@/components/AnalyticsChart";
 import LiveChart from "@/components/LiveChart";
+import MarketNews from "@/components/MarketNews";
+import AIAssistant from "@/components/AIAssistant";
 
 import { supabase } from "@/lib/supabase";
 
@@ -37,10 +39,14 @@ export default function DashboardPage() {
   const [sellPrice, setSellPrice] = useState("");
   const [notes, setNotes] = useState("");
 
+  // SCREENSHOT
+  const [screenshot, setScreenshot] =
+    useState<any>(null);
+
   // TRADES
   const [trades, setTrades] = useState<any[]>([]);
 
-  // GET LOGGED IN USER
+  // GET USER
   const getUser = async () => {
 
     const {
@@ -48,13 +54,16 @@ export default function DashboardPage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
+
       router.push("/auth");
+
     } else {
+
       setUser(user);
     }
   };
 
-  // FETCH USER TRADES
+  // FETCH TRADES
   const fetchTrades = async () => {
 
     if (!user) return;
@@ -68,17 +77,20 @@ export default function DashboardPage() {
       });
 
     if (error) {
-      console.log(error);
-    }
 
-    if (data) {
-      setTrades(data);
+      console.log(error);
+
+    } else {
+
+      setTrades(data || []);
     }
   };
 
   // LOAD USER
   useEffect(() => {
+
     getUser();
+
   }, []);
 
   // LOAD TRADES
@@ -90,6 +102,34 @@ export default function DashboardPage() {
 
   }, [user]);
 
+  // IMAGE UPLOAD
+  const uploadImage = async () => {
+
+    if (!screenshot) return null;
+
+    const fileName =
+      `${Date.now()}-${screenshot.name}`;
+
+    const { error } = await supabase.storage
+      .from("trade-images")
+      .upload(fileName, screenshot);
+
+    if (error) {
+
+      console.log(error);
+
+      return null;
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage
+      .from("trade-images")
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
   // SAVE TRADE
   const saveTrade = async () => {
 
@@ -97,6 +137,10 @@ export default function DashboardPage() {
       alert("Please login first");
       return;
     }
+
+    // UPLOAD IMAGE
+    const imageUrl =
+      await uploadImage();
 
     const { error } = await supabase
       .from("trades")
@@ -111,6 +155,7 @@ export default function DashboardPage() {
           buy_price: buyPrice,
           sell_price: sellPrice,
           notes: notes,
+          screenshot: imageUrl,
           user_id: user.id,
         },
       ]);
@@ -136,6 +181,7 @@ export default function DashboardPage() {
       setBuyPrice("");
       setSellPrice("");
       setNotes("");
+      setScreenshot(null);
     }
   };
 
@@ -199,7 +245,7 @@ export default function DashboardPage() {
       {/* MAIN */}
       <main className="flex-1 min-h-screen p-6 md:p-10 pt-24 md:pt-10">
 
-        {/* TOP HEADER */}
+        {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
 
           <div>
@@ -220,7 +266,7 @@ export default function DashboardPage() {
 
           </div>
 
-          {/* LOGOUT BUTTON */}
+          {/* LOGOUT */}
           <button
             onClick={logout}
             className="flex items-center gap-3 bg-red-600 hover:bg-red-700 transition rounded-2xl px-6 py-4 font-bold"
@@ -234,7 +280,7 @@ export default function DashboardPage() {
         {/* MARKET OVERVIEW */}
         <MarketOverview />
 
-        {/* ANALYTICS CARDS */}
+        {/* ANALYTICS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
 
           {/* TOTAL TRADES */}
@@ -320,11 +366,17 @@ export default function DashboardPage() {
 
         </div>
 
-        {/* EQUITY CURVE */}
+        {/* ANALYTICS CHART */}
         <AnalyticsChart trades={trades} />
 
         {/* LIVE CHART */}
         <LiveChart />
+
+        {/* MARKET NEWS */}
+        <MarketNews />
+
+        {/* AI ASSISTANT */}
+        <AIAssistant />
 
         {/* ADD TRADE */}
         <div className="mt-14 bg-[#050816] border border-zinc-900 rounded-3xl p-6 md:p-8">
@@ -402,7 +454,7 @@ export default function DashboardPage() {
 
             </div>
 
-            {/* PRICES */}
+            {/* PRICE SECTION */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
               <input
@@ -437,6 +489,15 @@ export default function DashboardPage() {
 
             </div>
 
+            {/* SCREENSHOT */}
+            <input
+              type="file"
+              onChange={(e) =>
+                setScreenshot(e.target.files?.[0])
+              }
+              className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5"
+            />
+
             {/* NOTES */}
             <textarea
               rows={5}
@@ -448,7 +509,7 @@ export default function DashboardPage() {
               className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
             />
 
-            {/* BUTTON */}
+            {/* SAVE BUTTON */}
             <button
               onClick={saveTrade}
               className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-2xl p-5 text-xl font-bold hover:opacity-90 transition"
@@ -467,7 +528,7 @@ export default function DashboardPage() {
             Trade History
           </h2>
 
-          <table className="w-full min-w-[800px]">
+          <table className="w-full min-w-[900px]">
 
             <thead className="border-b border-zinc-800 text-zinc-400">
 
@@ -495,6 +556,10 @@ export default function DashboardPage() {
 
                 <th className="text-left p-4">
                   Sell
+                </th>
+
+                <th className="text-left p-4">
+                  Screenshot
                 </th>
 
                 <th className="text-left p-4">
@@ -545,6 +610,26 @@ export default function DashboardPage() {
 
                     <td className="p-4">
                       ₹{trade.sell_price}
+                    </td>
+
+                    {/* SCREENSHOT */}
+                    <td className="p-4">
+
+                      {trade.screenshot ? (
+
+                        <a
+                          href={trade.screenshot}
+                          target="_blank"
+                          className="text-violet-400 underline"
+                        >
+                          View
+                        </a>
+
+                      ) : (
+
+                        "N/A"
+                      )}
+
                     </td>
 
                     <td

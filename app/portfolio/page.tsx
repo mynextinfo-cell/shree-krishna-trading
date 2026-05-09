@@ -1,357 +1,262 @@
-'use client'
+"use client";
+
+import { useEffect, useState } from "react";
 
 import {
-  TrendingUp,
-  TrendingDown,
-  PieChart,
   Wallet,
-} from 'lucide-react'
+  TrendingUp,
+  PieChart,
+} from "lucide-react";
 
-type Holding = {
-  stock: string
-  qty: number
-  avg: number
-  current: number
-}
+import Sidebar from "@/components/Sidebar";
+
+import { supabase } from "@/lib/supabase";
 
 export default function PortfolioPage() {
 
-  const holdings: Holding[] = [
+  const [trades, setTrades] = useState<any[]>([]);
 
-    {
-      stock: 'RELIANCE',
-      qty: 20,
-      avg: 2680,
-      current: 2845,
-    },
+  useEffect(() => {
 
-    {
-      stock: 'TCS',
-      qty: 10,
-      avg: 3920,
-      current: 4120,
-    },
+    fetchTrades();
 
-    {
-      stock: 'INFY',
-      qty: 25,
-      avg: 1620,
-      current: 1585,
-    },
+  }, []);
 
-    {
-      stock: 'HDFCBANK',
-      qty: 15,
-      avg: 1680,
-      current: 1742,
-    },
+  const fetchTrades = async () => {
 
-  ]
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const invested =
-    holdings.reduce(
-      (acc, item) =>
-        acc + item.avg * item.qty,
-      0
-    )
+    if (!user) return;
 
-  const currentValue =
-    holdings.reduce(
-      (acc, item) =>
-        acc +
-        item.current * item.qty,
-      0
-    )
+    const { data } = await supabase
+      .from("trades")
+      .select("*")
+      .eq("user_id", user.id);
+
+    if (data) {
+      setTrades(data);
+    }
+  };
+
+  // CALCULATIONS
+  const totalInvestment = trades.reduce(
+    (acc, trade) =>
+      acc +
+      (
+        Number(trade.buy_price || 0) *
+        Number(trade.quantity || 0)
+      ),
+    0
+  );
+
+  const currentValue = trades.reduce(
+    (acc, trade) =>
+      acc +
+      (
+        Number(trade.sell_price || 0) *
+        Number(trade.quantity || 0)
+      ),
+    0
+  );
 
   const totalPnL =
-    currentValue - invested
-
-  const totalReturn =
-    (
-      (totalPnL / invested) *
-      100
-    ).toFixed(2)
+    currentValue - totalInvestment;
 
   return (
 
-    <div className="min-h-screen bg-[#fff7fa] p-8">
+    <div className="flex bg-black text-white min-h-screen">
 
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
+      {/* SIDEBAR */}
+      <Sidebar />
 
-        <div>
-
-          <h1 className="text-6xl font-black text-pink-700">
-
-            Portfolio
-
-          </h1>
-
-          <p className="text-pink-500 text-2xl mt-3">
-
-            Track Your Investments
-
-          </p>
-
-        </div>
-
-        <div className="bg-white rounded-3xl p-5 shadow-md border border-pink-100">
-
-          <Wallet
-            className="text-pink-600"
-            size={40}
-          />
-
-        </div>
-
-      </div>
-
-      {/* STATS */}
-      <div className="grid grid-cols-4 gap-6 mt-10">
-
-        {/* INVESTED */}
-        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
-
-          <p className="text-gray-500 text-xl">
-
-            Invested Amount
-
-          </p>
-
-          <h2 className="text-5xl font-black text-pink-600 mt-5">
-
-            ₹ {invested.toLocaleString()}
-
-          </h2>
-
-        </div>
-
-        {/* CURRENT */}
-        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
-
-          <p className="text-gray-500 text-xl">
-
-            Current Value
-
-          </p>
-
-          <h2 className="text-5xl font-black text-blue-600 mt-5">
-
-            ₹ {currentValue.toLocaleString()}
-
-          </h2>
-
-        </div>
-
-        {/* PNL */}
-        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
-
-          <p className="text-gray-500 text-xl">
-
-            Total P/L
-
-          </p>
-
-          <h2
-            className={`text-5xl font-black mt-5 ${
-              totalPnL >= 0
-                ? 'text-green-600'
-                : 'text-red-600'
-            }`}
-          >
-
-            ₹ {totalPnL.toLocaleString()}
-
-          </h2>
-
-        </div>
-
-        {/* RETURN */}
-        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
-
-          <p className="text-gray-500 text-xl">
-
-            Total Return
-
-          </p>
-
-          <h2
-            className={`text-5xl font-black mt-5 ${
-              totalPnL >= 0
-                ? 'text-green-600'
-                : 'text-red-600'
-            }`}
-          >
-
-            {totalReturn}%
-
-          </h2>
-
-        </div>
-
-      </div>
-
-      {/* HOLDINGS */}
-      <div className="mt-10 bg-white rounded-3xl shadow-md border border-pink-100 overflow-hidden">
+      {/* MAIN */}
+      <main className="flex-1 p-6 md:p-10 pt-24 md:pt-10">
 
         {/* HEADER */}
-        <div className="grid grid-cols-6 bg-pink-50 px-6 py-5 font-bold text-gray-700">
+        <div className="mb-10">
 
-          <p>Stock</p>
+          <h1 className="text-4xl md:text-5xl font-bold">
+            Portfolio
+          </h1>
 
-          <p>Quantity</p>
-
-          <p>Avg Price</p>
-
-          <p>Current Price</p>
-
-          <p>P/L</p>
-
-          <p>Status</p>
+          <p className="text-zinc-400 mt-3">
+            Holdings & investment overview
+          </p>
 
         </div>
 
-        {/* ROWS */}
-        {holdings.map((item, index) => {
+        {/* CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-          const pnl =
-            (item.current - item.avg) *
-            item.qty
+          {/* INVESTMENT */}
+          <div className="bg-[#07122b] border border-zinc-800 rounded-3xl p-6">
 
-          const positive = pnl >= 0
-
-          return (
-
-            <div
-              key={index}
-              className="grid grid-cols-6 px-6 py-5 border-t border-pink-100 items-center"
-            >
-
-              <h3 className="text-2xl font-black">
-
-                {item.stock}
-
-              </h3>
-
-              <p className="text-lg">
-
-                {item.qty}
-
-              </p>
-
-              <p className="text-lg">
-
-                ₹ {item.avg}
-
-              </p>
-
-              <p className="text-lg">
-
-                ₹ {item.current}
-
-              </p>
-
-              <p
-                className={`font-bold text-xl ${
-                  positive
-                    ? 'text-green-600'
-                    : 'text-red-600'
-                }`}
-              >
-
-                ₹ {pnl}
-
-              </p>
+            <div className="flex items-center justify-between">
 
               <div>
 
-                {positive ? (
+                <p className="text-zinc-400">
+                  Total Investment
+                </p>
 
-                  <TrendingUp
-                    className="text-green-600"
-                    size={28}
-                  />
+                <h2 className="text-4xl font-bold mt-3">
+                  ₹{totalInvestment.toFixed(2)}
+                </h2>
 
-                ) : (
+              </div>
 
-                  <TrendingDown
-                    className="text-red-600"
-                    size={28}
-                  />
-
-                )}
-
+              <div className="bg-violet-500/20 p-4 rounded-2xl">
+                <Wallet size={32} />
               </div>
 
             </div>
 
-          )
+          </div>
 
-        })}
+          {/* CURRENT VALUE */}
+          <div className="bg-[#07122b] border border-zinc-800 rounded-3xl p-6">
 
-      </div>
+            <div className="flex items-center justify-between">
 
-      {/* ALLOCATION */}
-      <div className="mt-10 bg-white rounded-3xl p-8 shadow-md border border-pink-100">
+              <div>
 
-        <div className="flex items-center gap-4 mb-8">
-
-          <PieChart
-            className="text-pink-600"
-            size={40}
-          />
-
-          <h2 className="text-4xl font-black text-gray-800">
-
-            Portfolio Allocation
-
-          </h2>
-
-        </div>
-
-        <div className="grid grid-cols-4 gap-6">
-
-          {holdings.map((item, index) => {
-
-            const allocation =
-              (
-                (item.current *
-                  item.qty /
-                  currentValue) *
-                100
-              ).toFixed(1)
-
-            return (
-
-              <div
-                key={index}
-                className="bg-[#fff1f7] rounded-3xl p-6 border border-pink-100"
-              >
-
-                <h3 className="text-3xl font-black">
-
-                  {item.stock}
-
-                </h3>
-
-                <p className="text-pink-600 text-5xl font-black mt-5">
-
-                  {allocation}%
-
+                <p className="text-zinc-400">
+                  Current Value
                 </p>
+
+                <h2 className="text-4xl font-bold mt-3">
+                  ₹{currentValue.toFixed(2)}
+                </h2>
 
               </div>
 
-            )
+              <div className="bg-green-500/20 p-4 rounded-2xl">
+                <PieChart size={32} />
+              </div>
 
-          })}
+            </div>
+
+          </div>
+
+          {/* TOTAL PNL */}
+          <div className="bg-[#07122b] border border-zinc-800 rounded-3xl p-6">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-zinc-400">
+                  Total Profit/Loss
+                </p>
+
+                <h2
+                  className={`text-4xl font-bold mt-3 ${
+                    totalPnL >= 0
+                      ? "text-green-400"
+                      : "text-red-400"
+                  }`}
+                >
+                  ₹{totalPnL.toFixed(2)}
+                </h2>
+
+              </div>
+
+              <div className="bg-yellow-500/20 p-4 rounded-2xl">
+                <TrendingUp size={32} />
+              </div>
+
+            </div>
+
+          </div>
 
         </div>
 
-      </div>
+        {/* HOLDINGS */}
+        <div className="mt-14 bg-[#050816] border border-zinc-900 rounded-3xl p-6 md:p-8 overflow-x-auto">
+
+          <h2 className="text-3xl font-bold mb-8">
+            Holdings
+          </h2>
+
+          <table className="w-full min-w-[700px]">
+
+            <thead className="border-b border-zinc-800 text-zinc-400">
+
+              <tr>
+
+                <th className="text-left p-4">
+                  Asset
+                </th>
+
+                <th className="text-left p-4">
+                  Quantity
+                </th>
+
+                <th className="text-left p-4">
+                  Buy Price
+                </th>
+
+                <th className="text-left p-4">
+                  Current Price
+                </th>
+
+                <th className="text-left p-4">
+                  Value
+                </th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {trades.map((trade) => {
+
+                const value =
+                  Number(trade.sell_price || 0) *
+                  Number(trade.quantity || 0);
+
+                return (
+
+                  <tr
+                    key={trade.id}
+                    className="border-b border-zinc-900 hover:bg-zinc-900/40 transition"
+                  >
+
+                    <td className="p-4">
+                      {trade.stock_name}
+                    </td>
+
+                    <td className="p-4">
+                      {trade.quantity}
+                    </td>
+
+                    <td className="p-4">
+                      ₹{trade.buy_price}
+                    </td>
+
+                    <td className="p-4">
+                      ₹{trade.sell_price}
+                    </td>
+
+                    <td className="p-4 font-bold">
+                      ₹{value.toFixed(2)}
+                    </td>
+
+                  </tr>
+                );
+              })}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </main>
 
     </div>
-
-  )
-
+  );
 }

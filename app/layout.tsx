@@ -1,23 +1,24 @@
-import './globals.css'
+import type { Metadata } from "next";
 
-import type { Metadata } from 'next'
+import "./globals.css";
 
 export const metadata: Metadata = {
 
-  title: 'Shree Krishna Trading',
+  title: "Shree Krishna Trading",
 
-  description: 'Professional Trading Dashboard'
+  description:
+    "Professional Trading Dashboard",
 
-}
+  manifest: "/manifest.json",
+
+  themeColor: "#7c3aed",
+
+};
 
 export default function RootLayout({
-
   children,
-
 }: {
-
-  children: React.ReactNode
-
+  children: React.ReactNode;
 }) {
 
   return (
@@ -31,7 +32,5 @@ export default function RootLayout({
       </body>
 
     </html>
-
-  )
-
+  );
 }
