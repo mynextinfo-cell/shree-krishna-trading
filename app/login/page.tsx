@@ -1,125 +1,189 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '../../lib/supabase'
+
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
+
+import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
 
   const router = useRouter()
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [email, setEmail] =
+    useState('')
 
-  async function handleLogin() {
+  const [password, setPassword] =
+    useState('')
 
-    setLoading(true)
+  const [loading, setLoading] =
+    useState(false)
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
+  const [isSignup, setIsSignup] =
+    useState(false)
 
-    setLoading(false)
-
-    if (error) {
-      alert(error.message)
-    } else {
-      router.push('/dashboard')
-    }
-  }
-
-  async function handleSignup() {
+  const handleAuth = async () => {
 
     setLoading(true)
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password
-    })
+    try {
+
+      if (isSignup) {
+
+        const { error } =
+          await supabase.auth.signUp({
+
+            email,
+            password,
+
+          })
+
+        if (error) {
+
+          alert(error.message)
+
+        } else {
+
+          alert(
+            'Signup successful!'
+          )
+
+        }
+
+      } else {
+
+        const { error } =
+          await supabase.auth.signInWithPassword({
+
+            email,
+            password,
+
+          })
+
+        if (error) {
+
+          alert(error.message)
+
+        } else {
+
+          router.push('/dashboard')
+
+        }
+
+      }
+
+    } catch (error) {
+
+      alert('Something went wrong')
+
+    }
 
     setLoading(false)
 
-    if (error) {
-      alert(error.message)
-    } else {
-      alert('Account created successfully 🚀')
-    }
   }
 
   return (
-    <main className="min-h-screen bg-black flex items-center justify-center p-6">
 
-      <div className="w-full max-w-md bg-[#07142b] border border-gray-800 rounded-3xl p-8 shadow-2xl">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center p-5">
 
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-10">
 
-          <Image
-            src="/logo.png"
-            alt="Shree Krishna Trading"
-            width={120}
-            height={120}
-            className="rounded-2xl"
-            priority
+        {/* TITLE */}
+        <h1 className="text-5xl font-black text-center text-pink-700">
+
+          SK Trading
+
+        </h1>
+
+        <p className="text-center text-pink-500 mt-3">
+
+          Welcome Back Trader 🚀
+
+        </p>
+
+        {/* EMAIL */}
+        <div className="mt-8">
+
+          <label className="font-semibold text-gray-700">
+
+            Email
+
+          </label>
+
+          <input
+            type="email"
+            value={email}
+            onChange={(e) =>
+              setEmail(e.target.value)
+            }
+            placeholder="you@example.com"
+            className="w-full mt-2 px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
           />
 
         </div>
 
-        {/* Company Name */}
-        <div className="text-center mb-10">
+        {/* PASSWORD */}
+        <div className="mt-5">
 
-          <h1 className="text-5xl font-bold text-white mb-3 leading-tight">
-            Shree Krishna <br />
-            Trading
-          </h1>
+          <label className="font-semibold text-gray-700">
 
-          <p className="text-gray-400 text-lg">
-            Professional Trading Journal Platform
-          </p>
+            Password
+
+          </label>
+
+          <input
+            type="password"
+            value={password}
+            onChange={(e) =>
+              setPassword(e.target.value)
+            }
+            placeholder="••••••••"
+            className="w-full mt-2 px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
+          />
 
         </div>
 
-        {/* Email */}
-        <input
-          type="email"
-          placeholder="Enter Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full p-4 rounded-2xl bg-black border border-gray-700 text-white mb-5 outline-none focus:border-green-500"
-        />
-
-        {/* Password */}
-        <input
-          type="password"
-          placeholder="Enter Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-4 rounded-2xl bg-black border border-gray-700 text-white mb-6 outline-none focus:border-green-500"
-        />
-
-        {/* Login Button */}
+        {/* BUTTON */}
         <button
-          onClick={handleLogin}
+          onClick={handleAuth}
           disabled={loading}
-          className="w-full bg-green-600 hover:bg-green-700 transition-all duration-300 p-4 rounded-2xl font-bold text-white mb-4"
+          className="w-full mt-8 bg-gradient-to-r from-pink-500 to-rose-500 text-white py-4 rounded-2xl font-black text-lg shadow-lg"
         >
-          {loading ? 'Please wait...' : 'Login'}
+
+          {loading
+            ? 'Please wait...'
+            : isSignup
+            ? 'Create Account'
+            : 'Login'}
+
         </button>
 
-        {/* Signup Button */}
-        <button
-          onClick={handleSignup}
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 transition-all duration-300 p-4 rounded-2xl font-bold text-white"
-        >
-          Create Account
-        </button>
+        {/* TOGGLE */}
+        <p className="text-center text-gray-600 mt-6">
+
+          {isSignup
+            ? 'Already have account?'
+            : "Don't have account?"}
+
+          <button
+            onClick={() =>
+              setIsSignup(!isSignup)
+            }
+            className="text-pink-600 font-bold ml-2"
+          >
+
+            {isSignup
+              ? 'Login'
+              : 'Sign Up'}
+
+          </button>
+
+        </p>
 
       </div>
 
-    </main>
+    </div>
+
   )
+
 }

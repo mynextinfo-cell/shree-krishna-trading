@@ -1,379 +1,295 @@
 'use client'
 
-import { useState } from 'react'
+import {
+  useEffect,
+  useState,
+} from 'react'
 
-import nseStocks from '../data/nseStocks'
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  BookOpen,
+} from 'lucide-react'
+
+import Sidebar from '@/components/Sidebar'
 
 import { supabase } from '@/lib/supabase'
 
-import DashboardLayout from '@/components/DashboardLayout'
+type Trade = {
+  id: number
+  stock: string
+  type: string
+  entry: number
+  exit: number
+  quantity: number
+  notes: string
+}
 
 export default function JournalPage() {
 
-  const [trades, setTrades] = useState<any[]>([])
+  const [trades, setTrades] =
+    useState<Trade[]>([])
 
-  const [form, setForm] = useState({
+  const [stock, setStock] =
+    useState('')
 
-    stock: '',
-    type: 'BUY',
-    quantity: '',
-    entryPrice: '',
-    exitPrice: '',
-    brokerage: '',
-    tradeDate: '',
-    exitDate: '',
-    notes: ''
+  const [type, setType] =
+    useState('BUY')
 
-  })
+  const [entry, setEntry] =
+    useState('')
 
-  // STOCK SEARCH
-  const filteredStocks = nseStocks.filter((stock) =>
+  const [exit, setExit] =
+    useState('')
 
-    stock.toLowerCase().includes(
+  const [quantity, setQuantity] =
+    useState('')
 
-      form.stock.toLowerCase()
+  const [notes, setNotes] =
+    useState('')
 
+  const [editingId, setEditingId] =
+    useState<number | null>(
+      null
     )
 
-  )
+  // FETCH TRADES
+  const fetchTrades =
+    async () => {
 
-  // SAVE TRADE
-  const addTrade = async () => {
+      const {
+        data,
+      } = await supabase
+        .from('trades')
+        .select('*')
+        .order(
+          'id',
+          {
+            ascending: false,
+          }
+        )
 
-    if (
+      if (data) {
 
-      !form.stock ||
+        setTrades(data)
 
-      !form.quantity ||
-
-      !form.entryPrice ||
-
-      !form.exitPrice
-
-    ) {
-
-      alert('Please fill required fields')
-
-      return
-
-    }
-
-    // GET USER
-    const {
-
-      data: { user }
-
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-
-      alert('Please login first')
-
-      return
+      }
 
     }
 
-    const qty = Number(form.quantity)
+  useEffect(() => {
 
-    const entry = Number(form.entryPrice)
+    fetchTrades()
 
-    const exit = Number(form.exitPrice)
+  }, [])
 
-    const brokerage = Number(
+  // ADD / UPDATE TRADE
+  const handleSaveTrade =
+    async () => {
 
-      form.brokerage || 0
+      if (
+        !stock ||
+        !entry ||
+        !exit ||
+        !quantity
+      ) return
 
-    )
+      if (editingId) {
 
-    let pnl = 0
+        await supabase
+          .from('trades')
+          .update({
 
-    // BUY/SELL PNL
-    if (form.type === 'BUY') {
+            stock,
 
-      pnl =
+            type,
 
-        (exit - entry)
+            entry:
+              Number(entry),
 
-        *
+            exit:
+              Number(exit),
 
-        qty
+            quantity:
+              Number(quantity),
 
-        -
+            notes,
 
-        brokerage
+          })
+          .eq(
+            'id',
+            editingId
+          )
 
-    } else {
+      } else {
 
-      pnl =
+        await supabase
+          .from('trades')
+          .insert([{
 
-        (entry - exit)
+            stock,
 
-        *
+            type,
 
-        qty
+            entry:
+              Number(entry),
 
-        -
+            exit:
+              Number(exit),
 
-        brokerage
+            quantity:
+              Number(quantity),
 
-    }
+            notes,
 
-    // SAVE TO DATABASE
-    const { error } = await supabase
+          }])
 
-      .from('trades')
+      }
 
-      .insert([{
+      // RESET FORM
+      setStock('')
+      setType('BUY')
+      setEntry('')
+      setExit('')
+      setQuantity('')
+      setNotes('')
+      setEditingId(null)
 
-        user_id: user.id,
-
-        stock: form.stock,
-
-        type: form.type,
-
-        quantity: qty,
-
-        entry_price: entry,
-
-        exit_price: exit,
-
-        brokerage: brokerage,
-
-        trade_date: form.tradeDate,
-
-        exit_date: form.exitDate,
-
-        notes: form.notes
-
-      }])
-
-    if (error) {
-
-      console.log(error)
-
-      alert(error.message)
-
-      return
+      fetchTrades()
 
     }
 
-    // LOCAL UPDATE
-    const newTrade = {
+  // DELETE TRADE
+  const handleDelete =
+    async (
+      id: number
+    ) => {
 
-      id: trades.length + 1,
+      await supabase
+        .from('trades')
+        .delete()
+        .eq('id', id)
 
-      ...form,
-
-      pnl: pnl.toFixed(2)
+      fetchTrades()
 
     }
 
-    setTrades([newTrade, ...trades])
+  // EDIT TRADE
+  const handleEdit =
+    (trade: Trade) => {
 
-    alert('Trade Saved Successfully ✅')
+      setEditingId(
+        trade.id
+      )
 
-    // RESET FORM
-    setForm({
+      setStock(
+        trade.stock
+      )
 
-      stock: '',
-      type: 'BUY',
-      quantity: '',
-      entryPrice: '',
-      exitPrice: '',
-      brokerage: '',
-      tradeDate: '',
-      exitDate: '',
-      notes: ''
+      setType(
+        trade.type
+      )
 
-    })
+      setEntry(
+        String(
+          trade.entry
+        )
+      )
 
-  }
+      setExit(
+        String(
+          trade.exit
+        )
+      )
 
-  // TOTAL PNL
-  const totalPNL = trades.reduce(
+      setQuantity(
+        String(
+          trade.quantity
+        )
+      )
 
-    (acc, trade) =>
+      setNotes(
+        trade.notes
+      )
 
-      acc + Number(trade.pnl),
-
-    0
-
-  )
+    }
 
   return (
 
-    <DashboardLayout>
+    <div className="min-h-screen bg-[#fff7fa] flex">
 
-      <main className="min-h-screen bg-black text-white p-6">
+      {/* SIDEBAR */}
+      <Sidebar />
 
-        {/* PAGE TITLE */}
-        <div className="mb-8">
+      {/* MAIN CONTENT */}
+      <div className="flex-1 p-8 overflow-y-auto">
 
-          <h1 className="text-5xl font-bold text-pink-500 mb-2">
+        {/* HEADER */}
+        <div className="flex items-center gap-5 mb-10">
 
-            Trading Journal
+          <div className="bg-white p-5 rounded-3xl shadow-md border border-pink-100">
 
-          </h1>
-
-          <p className="text-gray-400 text-lg">
-
-            Record and manage your trades professionally
-
-          </p>
-
-        </div>
-
-        {/* SUMMARY */}
-        <div className="grid md:grid-cols-3 gap-5 mb-8">
-
-          {/* TOTAL TRADES */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-lg">
-
-            <p className="text-gray-400 mb-2">
-
-              Total Trades
-
-            </p>
-
-            <h2 className="text-4xl font-bold text-white">
-
-              {trades.length}
-
-            </h2>
+            <BookOpen
+              className="text-pink-600"
+              size={42}
+            />
 
           </div>
 
-          {/* TOTAL PNL */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-lg">
+          <div>
 
-            <p className="text-gray-400 mb-2">
+            <h1 className="text-6xl font-black text-pink-700">
 
-              Total Profit / Loss
+              Trading Journal
 
-            </p>
+            </h1>
 
-            <h2
-              className={`text-4xl font-bold ${
-                totalPNL >= 0
+            <p className="text-pink-500 text-2xl mt-2">
 
-                  ? 'text-green-500'
-
-                  : 'text-red-500'
-              }`}
-            >
-
-              ₹ {totalPNL.toFixed(2)}
-
-            </h2>
-
-          </div>
-
-          {/* ACTIVE RECORDS */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-lg">
-
-            <p className="text-gray-400 mb-2">
-
-              Active Records
+              Track & Analyze Your Trades
 
             </p>
-
-            <h2 className="text-4xl font-bold text-white">
-
-              {trades.length}
-
-            </h2>
 
           </div>
 
         </div>
 
-        {/* ADD TRADE */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl shadow-lg p-8 mb-10">
+        {/* FORM */}
+        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100 mb-10">
 
-          <h2 className="text-3xl font-bold mb-6 text-pink-400">
+          <h2 className="text-4xl font-black text-gray-800 mb-8">
 
-            ➕ Add Trade
+            {editingId
+              ? 'Edit Trade'
+              : 'Add New Trade'}
 
           </h2>
 
-          <div className="grid md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-3 gap-6">
 
-            {/* STOCK SEARCH */}
-            <div className="relative">
-
-              <input
-                type="text"
-                placeholder="Stock Name"
-                value={form.stock}
-                onChange={(e) =>
-
-                  setForm({
-
-                    ...form,
-
-                    stock: e.target.value
-
-                  })
-
-                }
-                className="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 w-full text-white"
-              />
-
-              {/* SUGGESTIONS */}
-              {form.stock && (
-
-                <div className="absolute z-50 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-lg w-full mt-2 max-h-[250px] overflow-y-auto">
-
-                  {filteredStocks
-
-                    .slice(0, 15)
-
-                    .map((stock) => (
-
-                      <button
-                        type="button"
-                        key={stock}
-                        onClick={() =>
-
-                          setForm({
-
-                            ...form,
-
-                            stock: stock
-
-                          })
-
-                        }
-                        className="w-full text-left px-4 py-3 hover:bg-zinc-800 border-b border-zinc-700"
-                      >
-
-                        {stock}
-
-                      </button>
-
-                    ))}
-
-                </div>
-
-              )}
-
-            </div>
-
-            {/* BUY/SELL */}
-            <select
-              value={form.type}
+            {/* STOCK */}
+            <input
+              type="text"
+              placeholder="Stock Name"
+              value={stock}
               onChange={(e) =>
-
-                setForm({
-
-                  ...form,
-
-                  type: e.target.value
-
-                })
-
+                setStock(
+                  e.target.value
+                )
               }
-              className="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 text-white"
+              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
+            />
+
+            {/* TYPE */}
+            <select
+              value={type}
+              onChange={(e) =>
+                setType(
+                  e.target.value
+                )
+              }
+              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
             >
 
               <option value="BUY">
@@ -390,154 +306,221 @@ export default function JournalPage() {
 
             </select>
 
-            {/* QUANTITY */}
-            <input
-              type="number"
-              placeholder="Quantity"
-              value={form.quantity}
-              onChange={(e) =>
-
-                setForm({
-
-                  ...form,
-
-                  quantity: e.target.value
-
-                })
-
-              }
-              className="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 text-white"
-            />
-
             {/* ENTRY */}
             <input
               type="number"
               placeholder="Entry Price"
-              value={form.entryPrice}
+              value={entry}
               onChange={(e) =>
-
-                setForm({
-
-                  ...form,
-
-                  entryPrice: e.target.value
-
-                })
-
+                setEntry(
+                  e.target.value
+                )
               }
-              className="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 text-white"
+              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
             />
 
             {/* EXIT */}
             <input
               type="number"
               placeholder="Exit Price"
-              value={form.exitPrice}
+              value={exit}
               onChange={(e) =>
-
-                setForm({
-
-                  ...form,
-
-                  exitPrice: e.target.value
-
-                })
-
+                setExit(
+                  e.target.value
+                )
               }
-              className="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 text-white"
+              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
             />
 
-            {/* BROKERAGE */}
+            {/* QUANTITY */}
             <input
               type="number"
-              placeholder="Brokerage"
-              value={form.brokerage}
+              placeholder="Quantity"
+              value={quantity}
               onChange={(e) =>
-
-                setForm({
-
-                  ...form,
-
-                  brokerage: e.target.value
-
-                })
-
+                setQuantity(
+                  e.target.value
+                )
               }
-              className="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 text-white"
-            />
-
-            {/* TRADE DATE */}
-            <input
-              type="date"
-              value={form.tradeDate}
-              onChange={(e) =>
-
-                setForm({
-
-                  ...form,
-
-                  tradeDate: e.target.value
-
-                })
-
-              }
-              className="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 text-white"
-            />
-
-            {/* EXIT DATE */}
-            <input
-              type="date"
-              value={form.exitDate}
-              onChange={(e) =>
-
-                setForm({
-
-                  ...form,
-
-                  exitDate: e.target.value
-
-                })
-
-              }
-              className="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 text-white"
+              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
             />
 
             {/* NOTES */}
             <input
               type="text"
-              placeholder="Strategy / Notes"
-              value={form.notes}
+              placeholder="Trade Notes"
+              value={notes}
               onChange={(e) =>
-
-                setForm({
-
-                  ...form,
-
-                  notes: e.target.value
-
-                })
-
+                setNotes(
+                  e.target.value
+                )
               }
-              className="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 text-white"
+              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
             />
 
           </div>
 
-          {/* SAVE BUTTON */}
+          {/* BUTTON */}
           <button
-            onClick={addTrade}
-            className="mt-8 bg-pink-600 hover:bg-pink-700 text-white px-10 py-4 rounded-2xl font-bold"
+            onClick={
+              handleSaveTrade
+            }
+            className="mt-8 flex items-center gap-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-8 py-4 rounded-2xl font-bold text-xl shadow-lg"
           >
 
-            Save Trade
+            <Plus size={24} />
+
+            {editingId
+              ? 'Update Trade'
+              : 'Add Trade'}
 
           </button>
 
         </div>
 
-      </main>
+        {/* TABLE */}
+        <div className="bg-white rounded-3xl shadow-md border border-pink-100 overflow-hidden">
 
-    </DashboardLayout>
+          {/* HEADER */}
+          <div className="grid grid-cols-8 bg-pink-50 px-8 py-6 font-black text-lg text-gray-700">
+
+            <p>Stock</p>
+            <p>Type</p>
+            <p>Entry</p>
+            <p>Exit</p>
+            <p>Qty</p>
+            <p>P/L</p>
+            <p>Edit</p>
+            <p>Delete</p>
+
+          </div>
+
+          {/* ROWS */}
+          {trades.length > 0 ? (
+
+            trades.map(
+              (
+                trade,
+                index
+              ) => {
+
+                const pnl =
+                  (
+                    trade.exit -
+                    trade.entry
+                  ) *
+                  trade.quantity
+
+                return (
+
+                  <div
+                    key={index}
+                    className="grid grid-cols-8 px-8 py-6 border-t border-pink-100 items-center"
+                  >
+
+                    <p className="font-black text-xl">
+
+                      {trade.stock}
+
+                    </p>
+
+                    <p
+                      className={`font-bold ${
+                        trade.type ===
+                        'BUY'
+                          ? 'text-green-600'
+                          : 'text-red-500'
+                      }`}
+                    >
+
+                      {trade.type}
+
+                    </p>
+
+                    <p>
+
+                      ₹ {trade.entry}
+
+                    </p>
+
+                    <p>
+
+                      ₹ {trade.exit}
+
+                    </p>
+
+                    <p>
+
+                      {trade.quantity}
+
+                    </p>
+
+                    <p
+                      className={`font-black ${
+                        pnl >= 0
+                          ? 'text-green-600'
+                          : 'text-red-500'
+                      }`}
+                    >
+
+                      ₹ {pnl}
+
+                    </p>
+
+                    {/* EDIT */}
+                    <button
+                      onClick={() =>
+                        handleEdit(
+                          trade
+                        )
+                      }
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+
+                      <Pencil
+                        size={24}
+                      />
+
+                    </button>
+
+                    {/* DELETE */}
+                    <button
+                      onClick={() =>
+                        handleDelete(
+                          trade.id
+                        )
+                      }
+                      className="text-red-500 hover:text-red-700"
+                    >
+
+                      <Trash2
+                        size={24}
+                      />
+
+                    </button>
+
+                  </div>
+
+                )
+
+              }
+            )
+
+          ) : (
+
+            <div className="p-10 text-center text-gray-500 text-2xl">
+
+              No trades added yet.
+
+            </div>
+
+          )}
+
+        </div>
+
+      </div>
+
+    </div>
 
   )
 

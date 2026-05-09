@@ -1,234 +1,125 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-
-import { useRouter } from 'next/navigation'
-
-import { supabase } from '@/lib/supabase'
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 export default function AuthPage() {
 
-  const router = useRouter()
+  const router = useRouter();
 
-  const [isLogin, setIsLogin] = useState(true)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const [email, setEmail] = useState('')
+  // SIGN UP
+  const signUp = async () => {
 
-  const [password, setPassword] = useState('')
+    const { error } =
+      await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-  const [loading, setLoading] = useState(false)
+    if (error) {
 
-  // HANDLE AUTH
-  const handleAuth = async () => {
+      alert(error.message);
 
-    if (!email || !password) {
+    } else {
 
-      alert('Please fill all fields')
-
-      return
-
+      alert(
+        "Account Created Successfully ✅"
+      );
     }
+  };
 
-    setLoading(true)
+  // LOGIN
+  const login = async () => {
 
-    try {
+    const { error } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      // LOGIN
-      if (isLogin) {
+    if (error) {
 
-        const { error } = await supabase.auth.signInWithPassword({
+      alert(error.message);
 
-          email,
+    } else {
 
-          password
+      alert("Login Successful ✅");
 
-        })
-
-        if (error) {
-
-          alert(error.message)
-
-          setLoading(false)
-
-          return
-
-        }
-
-        alert('Login Successful ✅')
-
-        // REDIRECT TO DASHBOARD
-        router.push('/dashboard')
-
-      }
-
-      // SIGNUP
-      else {
-
-        const {
-
-          data,
-          error
-
-        } = await supabase.auth.signUp({
-
-          email,
-
-          password
-
-        })
-
-        if (error) {
-
-          alert(error.message)
-
-          setLoading(false)
-
-          return
-
-        }
-
-        // CREATE PROFILE
-        if (data.user) {
-
-          await supabase
-
-            .from('profiles')
-
-            .insert([{
-
-              id: data.user.id,
-
-              email: data.user.email,
-
-              role: 'user'
-
-            }])
-
-        }
-
-        alert(
-
-          'Account Created Successfully ✅'
-
-        )
-
-        // REDIRECT TO DASHBOARD
-        router.push('/dashboard')
-
-      }
-
-    } catch (error) {
-
-      console.log(error)
-
-      alert('Something went wrong')
-
+      router.push("/dashboard");
     }
-
-    setLoading(false)
-
-  }
+  };
 
   return (
 
-    <main className="min-h-screen flex items-center justify-center bg-black text-white p-6">
+    <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
 
-      {/* CARD */}
-      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-10 shadow-2xl">
+      <div className="w-full max-w-md bg-[#050816] border border-zinc-900 rounded-3xl p-8">
 
-        {/* COMPANY */}
-        <div className="text-center mb-10">
+        {/* TITLE */}
+        <div className="mb-10 text-center">
 
-          <h1 className="text-4xl font-bold text-pink-500 mb-3">
-
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-400 to-fuchsia-500 bg-clip-text text-transparent">
             Shree Krishna Trading
-
           </h1>
 
-          <p className="text-gray-400">
-
-            Trust Commitment Growth
-
+          <p className="text-zinc-400 mt-4">
+            Professional Trading Dashboard
           </p>
 
         </div>
 
-        {/* TITLE */}
-        <h2 className="text-3xl font-bold mb-8 text-center">
+        {/* FORM */}
+        <div className="space-y-6">
 
-          {isLogin
-
-            ? 'Login to Dashboard'
-
-            : 'Create New Account'}
-
-        </h2>
-
-        {/* EMAIL */}
-        <input
-          type="email"
-          placeholder="Enter Email"
-          value={email}
-          onChange={(e) =>
-            setEmail(e.target.value)
-          }
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-2xl p-4 mb-5 text-white"
-        />
-
-        {/* PASSWORD */}
-        <input
-          type="password"
-          placeholder="Enter Password"
-          value={password}
-          onChange={(e) =>
-            setPassword(e.target.value)
-          }
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-2xl p-4 mb-6 text-white"
-        />
-
-        {/* BUTTON */}
-        <button
-          onClick={handleAuth}
-          disabled={loading}
-          className="w-full bg-pink-600 hover:bg-pink-700 transition rounded-2xl py-4 font-bold text-lg"
-        >
-
-          {loading
-
-            ? 'Please wait...'
-
-            : isLogin
-
-              ? 'Login'
-
-              : 'Create Account'}
-
-        </button>
-
-        {/* TOGGLE */}
-        <div className="mt-8 text-center">
-
-          <button
-            onClick={() =>
-              setIsLogin(!isLogin)
+          {/* EMAIL */}
+          <input
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) =>
+              setEmail(e.target.value)
             }
-            className="text-pink-400 hover:text-pink-300 transition"
-          >
+            className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
+          />
 
-            {isLogin
+          {/* PASSWORD */}
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) =>
+              setPassword(e.target.value)
+            }
+            className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
+          />
 
-              ? 'Create new account'
+          {/* BUTTONS */}
+          <div className="grid grid-cols-2 gap-4">
 
-              : 'Already have an account? Login'}
+            <button
+              onClick={signUp}
+              className="bg-violet-600 rounded-2xl p-5 text-lg font-bold hover:opacity-90 transition"
+            >
+              Sign Up
+            </button>
 
-          </button>
+            <button
+              onClick={login}
+              className="bg-fuchsia-600 rounded-2xl p-5 text-lg font-bold hover:opacity-90 transition"
+            >
+              Login
+            </button>
+
+          </div>
 
         </div>
 
       </div>
 
     </main>
-
-  )
-
+  );
 }

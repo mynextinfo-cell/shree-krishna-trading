@@ -1,541 +1,537 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-
-import DashboardLayout from '@/components/DashboardLayout'
-
-import { supabase } from '@/lib/supabase'
-
 import {
-
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
+  TrendingUp,
+  TrendingDown,
+  Brain,
+  Target,
+  Trophy,
+  AlertTriangle,
+  BarChart3,
   PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar
+} from 'lucide-react'
 
-} from 'recharts'
+type Trade = {
+  stock: string
+  pnl: number
+  emotion: string
+  strategy: string
+  profit: boolean
+}
 
 export default function AnalyticsPage() {
 
-  // DATABASE TRADES
-  const [trades, setTrades] = useState<any[]>([])
-
-  // FETCH TRADES
-  useEffect(() => {
-
-    const fetchTrades = async () => {
-
-      const {
-
-        data: { user }
-
-      } = await supabase.auth.getUser()
-
-      if (!user) return
-
-      const { data, error } = await supabase
-
-        .from('trades')
-
-        .select('*')
-        .eq('user_id', user.id)
-
-      if (error) {
-
-        console.log(error)
-
-        return
-
-      }
-
-      setTrades(data || [])
-
-    }
-
-    fetchTrades()
-
-  }, [])
-
-  // CALCULATE REAL PNL
-  const totalPNL = useMemo(() => {
-
-    return trades.reduce(
-
-      (acc, trade) => {
-
-        const pnl =
-
-          trade.type === 'BUY'
-
-            ? (
-                (
-                  trade.exit_price -
-                  trade.entry_price
-                )
-                *
-                trade.quantity
-              )
-              -
-              trade.brokerage
-
-            : (
-                (
-                  trade.entry_price -
-                  trade.exit_price
-                )
-                *
-                trade.quantity
-              )
-              -
-              trade.brokerage
-
-        return acc + pnl
-
-      },
-
-      0
-
-    )
-
-  }, [trades])
-
-  // WINNING & LOSING TRADES
-  const winningTrades = trades.filter((trade) => {
-
-    const pnl =
-
-      trade.type === 'BUY'
-
-        ? (
-            (
-              trade.exit_price -
-              trade.entry_price
-            )
-            *
-            trade.quantity
-          )
-          -
-          trade.brokerage
-
-        : (
-            (
-              trade.entry_price -
-              trade.exit_price
-            )
-            *
-            trade.quantity
-          )
-          -
-          trade.brokerage
-
-    return pnl > 0
-
-  })
-
-  const losingTrades = trades.filter((trade) => {
-
-    const pnl =
-
-      trade.type === 'BUY'
-
-        ? (
-            (
-              trade.exit_price -
-              trade.entry_price
-            )
-            *
-            trade.quantity
-          )
-          -
-          trade.brokerage
-
-        : (
-            (
-              trade.entry_price -
-              trade.exit_price
-            )
-            *
-            trade.quantity
-          )
-          -
-          trade.brokerage
-
-    return pnl <= 0
-
-  })
-
-  // WIN RATIO
-  const winRatio = trades.length
-
-    ? (
-        (
-          winningTrades.length /
-          trades.length
-        )
-        *
-        100
-      ).toFixed(1)
-
-    : 0
-
-  // EQUITY CURVE DATA
-  const equityData = trades.map(
-
-    (trade, index) => {
-
-      const pnl =
-
-        trade.type === 'BUY'
-
-          ? (
-              (
-                trade.exit_price -
-                trade.entry_price
-              )
-              *
-              trade.quantity
-            )
-            -
-            trade.brokerage
-
-          : (
-              (
-                trade.entry_price -
-                trade.exit_price
-              )
-              *
-              trade.quantity
-            )
-            -
-            trade.brokerage
-
-      return {
-
-        trade: `T${index + 1}`,
-
-        pnl
-
-      }
-
-    }
-
-  )
-
-  // PIE CHART DATA
-  const winData = [
+  // SAMPLE DATA
+  const trades: Trade[] = [
 
     {
-
-      name: 'Winning',
-
-      value: winningTrades.length
-
+      stock: 'RELIANCE',
+      pnl: 5200,
+      emotion: 'Confident',
+      strategy: 'Breakout',
+      profit: true,
     },
 
     {
+      stock: 'INFY',
+      pnl: -1800,
+      emotion: 'Fear',
+      strategy: 'Reversal',
+      profit: false,
+    },
 
-      name: 'Losing',
+    {
+      stock: 'TCS',
+      pnl: 3400,
+      emotion: 'Disciplined',
+      strategy: 'Momentum',
+      profit: true,
+    },
 
-      value: losingTrades.length
+    {
+      stock: 'HDFCBANK',
+      pnl: -950,
+      emotion: 'FOMO',
+      strategy: 'Scalping',
+      profit: false,
+    },
 
-    }
-
-  ]
-
-  // MONTHLY DATA
-  const monthlyMap: any = {}
-
-  trades.forEach((trade) => {
-
-    const month =
-
-      trade.trade_date
-
-        ? new Date(
-            trade.trade_date
-          ).toLocaleString(
-
-            'default',
-
-            {
-
-              month: 'short'
-
-            }
-
-          )
-
-        : 'Unknown'
-
-    if (!monthlyMap[month]) {
-
-      monthlyMap[month] = 0
-
-    }
-
-    monthlyMap[month] += 1
-
-  })
-
-  const monthlyData = Object.keys(
-
-    monthlyMap
-
-  ).map((month) => ({
-
-    month,
-
-    trades: monthlyMap[month]
-
-  }))
-
-  const COLORS = [
-
-    '#22c55e',
-
-    '#ef4444'
+    {
+      stock: 'BANKNIFTY',
+      pnl: 7600,
+      emotion: 'Focused',
+      strategy: 'Option Buying',
+      profit: true,
+    },
 
   ]
+
+  // CALCULATIONS
+  const totalPnL =
+    trades.reduce(
+      (acc, trade) =>
+        acc + trade.pnl,
+      0
+    )
+
+  const winningTrades =
+    trades.filter(
+      trade => trade.profit
+    )
+
+  const losingTrades =
+    trades.filter(
+      trade => !trade.profit
+    )
+
+  const winRatio =
+    (
+      (winningTrades.length /
+        trades.length) *
+      100
+    ).toFixed(0)
+
+  const bestTrade =
+    Math.max(
+      ...trades.map(
+        trade => trade.pnl
+      )
+    )
+
+  const worstTrade =
+    Math.min(
+      ...trades.map(
+        trade => trade.pnl
+      )
+    )
+
+  const averagePnL =
+    (
+      totalPnL /
+      trades.length
+    ).toFixed(0)
+
+  // AI INSIGHT
+  const aiInsight =
+    totalPnL > 0
+      ? 'Your trading performance is improving consistently. Momentum and breakout strategies are generating strong profits. Continue maintaining discipline and proper risk management.'
+      : 'Your recent performance indicates emotional decision making. Reduce overtrading and focus on higher probability setups.'
 
   return (
 
-    <DashboardLayout>
+    <div className="min-h-screen bg-[#fff7fa] p-8">
 
-      <main className="min-h-screen bg-black text-white p-6">
+      {/* HEADER */}
+      <div className="flex items-center gap-5 mb-10">
 
-        {/* PAGE TITLE */}
-        <div className="mb-8">
+        <div className="bg-white p-5 rounded-3xl shadow-md border border-pink-100">
 
-          <h1 className="text-5xl font-bold text-pink-500 mb-2">
+          <Brain
+            className="text-pink-600"
+            size={42}
+          />
 
-            Trading Analytics
+        </div>
+
+        <div>
+
+          <h1 className="text-6xl font-black text-pink-700">
+
+            AI Analytics
 
           </h1>
 
-          <p className="text-gray-400 text-lg">
+          <p className="text-pink-500 text-2xl mt-2">
 
-            Professional performance analysis dashboard
+            Smart Trading Performance Insights
 
           </p>
 
         </div>
 
-        {/* SUMMARY CARDS */}
-        <div className="grid md:grid-cols-4 gap-6 mb-10">
+      </div>
 
-          {/* TOTAL PNL */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-lg">
+      {/* TOP STATS */}
+      <div className="grid grid-cols-4 gap-6 mb-10">
 
-            <p className="text-gray-400 mb-2">
+        {/* TOTAL PNL */}
+        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
+
+          <div className="flex items-center gap-4">
+
+            <TrendingUp
+              className="text-green-600"
+              size={36}
+            />
+
+            <p className="text-xl font-bold text-gray-600">
 
               Total P/L
 
             </p>
 
-            <h2
-              className={`text-4xl font-bold ${
-                totalPNL >= 0
-
-                  ? 'text-green-400'
-
-                  : 'text-red-400'
-              }`}
-            >
-
-              ₹ {totalPNL.toFixed(2)}
-
-            </h2>
-
           </div>
 
-          {/* WIN RATE */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-lg">
+          <h2
+            className={`text-5xl font-black mt-6 ${
+              totalPnL >= 0
+                ? 'text-green-600'
+                : 'text-red-600'
+            }`}
+          >
 
-            <p className="text-gray-400 mb-2">
+            ₹ {totalPnL}
+
+          </h2>
+
+        </div>
+
+        {/* WIN RATIO */}
+        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
+
+          <div className="flex items-center gap-4">
+
+            <Target
+              className="text-blue-600"
+              size={36}
+            />
+
+            <p className="text-xl font-bold text-gray-600">
 
               Win Ratio
 
             </p>
 
-            <h2 className="text-4xl font-bold text-pink-400">
-
-              {winRatio}%
-
-            </h2>
-
           </div>
 
-          {/* TOTAL TRADES */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-lg">
+          <h2 className="text-5xl font-black text-blue-600 mt-6">
 
-            <p className="text-gray-400 mb-2">
-
-              Total Trades
-
-            </p>
-
-            <h2 className="text-4xl font-bold text-white">
-
-              {trades.length}
-
-            </h2>
-
-          </div>
-
-          {/* WINNING */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-lg">
-
-            <p className="text-gray-400 mb-2">
-
-              Winning Trades
-
-            </p>
-
-            <h2 className="text-4xl font-bold text-green-400">
-
-              {winningTrades.length}
-
-            </h2>
-
-          </div>
-
-        </div>
-
-        {/* EQUITY CURVE */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 mb-10 shadow-lg">
-
-          <h2 className="text-3xl font-bold text-pink-400 mb-6">
-
-            📈 Equity Curve
+            {winRatio}%
 
           </h2>
 
-          <div className="w-full h-[400px]">
+        </div>
 
-            <ResponsiveContainer width="100%" height="100%">
+        {/* BEST TRADE */}
+        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
 
-              <LineChart data={equityData}>
+          <div className="flex items-center gap-4">
 
-                <XAxis dataKey="trade" />
+            <Trophy
+              className="text-yellow-500"
+              size={36}
+            />
 
-                <YAxis />
+            <p className="text-xl font-bold text-gray-600">
 
-                <Tooltip />
+              Best Trade
 
-                <Line
-                  type="monotone"
-                  dataKey="pnl"
-                  stroke="#ec4899"
-                  strokeWidth={4}
-                />
+            </p>
 
-              </LineChart>
+          </div>
 
-            </ResponsiveContainer>
+          <h2 className="text-5xl font-black text-yellow-500 mt-6">
+
+            ₹ {bestTrade}
+
+          </h2>
+
+        </div>
+
+        {/* WORST TRADE */}
+        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
+
+          <div className="flex items-center gap-4">
+
+            <AlertTriangle
+              className="text-red-500"
+              size={36}
+            />
+
+            <p className="text-xl font-bold text-gray-600">
+
+              Worst Trade
+
+            </p>
+
+          </div>
+
+          <h2 className="text-5xl font-black text-red-500 mt-6">
+
+            ₹ {worstTrade}
+
+          </h2>
+
+        </div>
+
+      </div>
+
+      {/* CHART CARDS */}
+      <div className="grid grid-cols-2 gap-8 mb-10">
+
+        {/* STRATEGY PERFORMANCE */}
+        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
+
+          <div className="flex items-center gap-4 mb-8">
+
+            <BarChart3
+              className="text-pink-600"
+              size={38}
+            />
+
+            <h2 className="text-3xl font-black text-gray-800">
+
+              Strategy Performance
+
+            </h2>
+
+          </div>
+
+          <div className="space-y-6">
+
+            {[
+              'Breakout',
+              'Momentum',
+              'Reversal',
+              'Scalping',
+            ].map(
+              (
+                strategy,
+                index
+              ) => (
+
+                <div
+                  key={index}
+                >
+
+                  <div className="flex justify-between mb-2">
+
+                    <p className="font-bold text-lg">
+
+                      {strategy}
+
+                    </p>
+
+                    <p className="font-bold text-pink-600">
+
+                      {
+                        Math.floor(
+                          Math.random() *
+                            40 +
+                            60
+                        )
+                      }
+                      %
+
+                    </p>
+
+                  </div>
+
+                  <div className="w-full h-4 bg-pink-100 rounded-full overflow-hidden">
+
+                    <div
+                      className="h-full bg-gradient-to-r from-pink-500 to-rose-500 rounded-full"
+                      style={{
+                        width: `${
+                          Math.floor(
+                            Math.random() *
+                              40 +
+                              60
+                          )
+                        }%`,
+                      }}
+                    />
+
+                  </div>
+
+                </div>
+
+              )
+            )}
 
           </div>
 
         </div>
 
-        {/* CHARTS */}
-        <div className="grid md:grid-cols-2 gap-8">
+        {/* EMOTIONAL ANALYSIS */}
+        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
 
-          {/* WIN RATIO */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-lg">
+          <div className="flex items-center gap-4 mb-8">
 
-            <h2 className="text-3xl font-bold text-pink-400 mb-6">
+            <PieChart
+              className="text-blue-600"
+              size={38}
+            />
 
-              🥧 Win Ratio
+            <h2 className="text-3xl font-black text-gray-800">
+
+              Emotional Analysis
 
             </h2>
 
-            <div className="w-full h-[350px]">
+          </div>
 
-              <ResponsiveContainer width="100%" height="100%">
+          <div className="space-y-5">
 
-                <PieChart>
+            {[
+              'Confident',
+              'Focused',
+              'Fear',
+              'FOMO',
+              'Disciplined',
+            ].map(
+              (
+                emotion,
+                index
+              ) => (
 
-                  <Pie
-                    data={winData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={120}
-                    dataKey="value"
-                    label
-                  >
+                <div
+                  key={index}
+                  className="flex items-center justify-between bg-[#fff1f7] p-5 rounded-2xl"
+                >
 
-                    {winData.map(
+                  <p className="text-xl font-bold">
 
-                      (entry, index) => (
+                    {emotion}
 
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index]}
-                        />
+                  </p>
 
+                  <p className="text-pink-600 text-2xl font-black">
+
+                    {
+                      Math.floor(
+                        Math.random() *
+                          25 +
+                          10
                       )
+                    }
+                    %
 
-                    )}
+                  </p>
 
-                  </Pie>
+                </div>
 
-                  <Tooltip />
-
-                </PieChart>
-
-              </ResponsiveContainer>
-
-            </div>
-
-          </div>
-
-          {/* MONTHLY TRADES */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-lg">
-
-            <h2 className="text-3xl font-bold text-pink-400 mb-6">
-
-              📊 Monthly Trades
-
-            </h2>
-
-            <div className="w-full h-[350px]">
-
-              <ResponsiveContainer width="100%" height="100%">
-
-                <BarChart data={monthlyData}>
-
-                  <XAxis dataKey="month" />
-
-                  <YAxis />
-
-                  <Tooltip />
-
-                  <Bar
-                    dataKey="trades"
-                    fill="#ec4899"
-                    radius={[10, 10, 0, 0]}
-                  />
-
-                </BarChart>
-
-              </ResponsiveContainer>
-
-            </div>
+              )
+            )}
 
           </div>
 
         </div>
 
-      </main>
+      </div>
 
-    </DashboardLayout>
+      {/* AI INSIGHT */}
+      <div className="bg-white rounded-3xl p-10 shadow-md border border-pink-100">
+
+        <div className="flex items-center gap-5 mb-8">
+
+          <Brain
+            className="text-pink-600"
+            size={45}
+          />
+
+          <h2 className="text-4xl font-black text-gray-800">
+
+            AI Trading Insight
+
+          </h2>
+
+        </div>
+
+        <p className="text-2xl text-gray-700 leading-relaxed">
+
+          {aiInsight}
+
+        </p>
+
+      </div>
+
+      {/* TRADE HISTORY */}
+      <div className="mt-10 bg-white rounded-3xl shadow-md border border-pink-100 overflow-hidden">
+
+        {/* HEADER */}
+        <div className="grid grid-cols-5 bg-pink-50 px-8 py-6 font-black text-xl text-gray-700">
+
+          <p>Stock</p>
+
+          <p>P/L</p>
+
+          <p>Emotion</p>
+
+          <p>Strategy</p>
+
+          <p>Status</p>
+
+        </div>
+
+        {/* ROWS */}
+        {trades.map(
+          (
+            trade,
+            index
+          ) => (
+
+            <div
+              key={index}
+              className="grid grid-cols-5 px-8 py-6 border-t border-pink-100 items-center"
+            >
+
+              <p className="font-black text-2xl">
+
+                {trade.stock}
+
+              </p>
+
+              <p
+                className={`font-black text-2xl ${
+                  trade.pnl >= 0
+                    ? 'text-green-600'
+                    : 'text-red-600'
+                }`}
+              >
+
+                ₹ {trade.pnl}
+
+              </p>
+
+              <p className="font-bold text-lg">
+
+                {trade.emotion}
+
+              </p>
+
+              <p className="font-bold text-lg">
+
+                {trade.strategy}
+
+              </p>
+
+              <div>
+
+                <span
+                  className={`px-5 py-2 rounded-2xl text-white font-bold text-lg ${
+                    trade.profit
+                      ? 'bg-green-500'
+                      : 'bg-red-500'
+                  }`}
+                >
+
+                  {trade.profit
+                    ? 'Profit'
+                    : 'Loss'}
+
+                </span>
+
+              </div>
+
+            </div>
+
+          )
+        )}
+
+      </div>
+
+    </div>
 
   )
 

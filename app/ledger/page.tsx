@@ -1,357 +1,293 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import {
+  Wallet,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Plus,
+  Trash2,
+  Landmark,
+} from 'lucide-react'
 
-import { supabase } from '@/lib/supabase'
+import {
+  useState,
+} from 'react'
 
-import DashboardLayout from '@/components/DashboardLayout'
+type Transaction = {
+  id: number
+  type: 'Income' | 'Expense'
+  category: string
+  amount: number
+  note: string
+  date: string
+}
 
 export default function LedgerPage() {
 
-  // DATABASE TRADES
-  const [ledgerData, setLedgerData] = useState<any[]>([])
+  const [transactions, setTransactions] =
+    useState<Transaction[]>([])
 
-  // LIVE PRICES
-  const [livePrices, setLivePrices] = useState<any>({})
+  const [type, setType] =
+    useState<'Income' | 'Expense'>(
+      'Income'
+    )
 
-  // FILTERS
-  const [search, setSearch] = useState('')
+  const [category, setCategory] =
+    useState('')
 
-  const [tradeType, setTradeType] = useState('ALL')
+  const [amount, setAmount] =
+    useState('')
 
-  // FETCH TRADES
-  useEffect(() => {
+  const [note, setNote] =
+    useState('')
 
-    const fetchTrades = async () => {
+  // ADD TRANSACTION
+  const handleAddTransaction =
+    () => {
 
-      // GET USER
-      const {
+      if (
+        !category ||
+        !amount
+      ) return
 
-        data: { user }
+      const newTransaction = {
 
-      } = await supabase.auth.getUser()
+        id: Date.now(),
 
-      if (!user) return
+        type,
 
-      // CHECK ROLE
-      const { data: profile } = await supabase
+        category,
 
-        .from('profiles')
+        amount:
+          Number(amount),
 
-        .select('*')
+        note,
 
-        .eq('id', user.id)
+        date:
+          new Date().toLocaleDateString(),
 
-        .single()
+      }
 
-      // BASE QUERY
-      let query = supabase
+      setTransactions([
+        newTransaction,
+        ...transactions,
+      ])
 
-        .from('trades')
+      setCategory('')
+      setAmount('')
+      setNote('')
 
-        .select('*')
+    }
 
-      // NORMAL USER
-      if (profile?.role !== 'admin') {
+  // DELETE TRANSACTION
+  const handleDelete =
+    (id: number) => {
 
-        query = query.eq(
-
-          'user_id',
-
-          user.id
-
+      const updated =
+        transactions.filter(
+          item =>
+            item.id !== id
         )
 
-      }
-
-      // FETCH DATA
-      const { data, error } = await query
-
-        .order('id', {
-
-          ascending: false
-
-        })
-
-      if (error) {
-
-        console.log(error)
-
-        return
-
-      }
-
-      setLedgerData(data || [])
+      setTransactions(updated)
 
     }
 
-    fetchTrades()
+  // CALCULATIONS
+  const totalIncome =
+    transactions
+      .filter(
+        item =>
+          item.type ===
+          'Income'
+      )
+      .reduce(
+        (acc, item) =>
+          acc + item.amount,
+        0
+      )
 
-  }, [])
+  const totalExpense =
+    transactions
+      .filter(
+        item =>
+          item.type ===
+          'Expense'
+      )
+      .reduce(
+        (acc, item) =>
+          acc + item.amount,
+        0
+      )
 
-  // FETCH LIVE PRICES
-  useEffect(() => {
-
-    const fetchPrices = async () => {
-
-      const updatedPrices: any = {}
-
-      for (const trade of ledgerData) {
-
-        try {
-
-          const response = await fetch(
-
-            `/api/stock-price?symbol=${trade.stock}`
-
-          )
-
-          const data = await response.json()
-
-          updatedPrices[trade.stock] = data.price
-
-        } catch (error) {
-
-          console.log(error)
-
-        }
-
-      }
-
-      setLivePrices(updatedPrices)
-
-    }
-
-    if (ledgerData.length > 0) {
-
-      fetchPrices()
-
-    }
-
-  }, [ledgerData])
-
-  // FILTERED DATA
-  const filteredData = useMemo(() => {
-
-    return ledgerData.filter((trade) => {
-
-      const stockMatch =
-
-        trade.stock
-          ?.toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
-
-      const typeMatch =
-
-        tradeType === 'ALL'
-
-          ? true
-
-          : trade.type === tradeType
-
-      return stockMatch && typeMatch
-
-    })
-
-  }, [
-
-    ledgerData,
-    search,
-    tradeType
-
-  ])
-
-  // TOTAL PNL
-  const totalPNL = filteredData.reduce(
-
-    (acc, trade) => {
-
-      const ltp =
-
-        livePrices[trade.stock]
-
-        ||
-
-        trade.exit_price
-
-      const pnl =
-
-        (
-          (
-            ltp -
-            trade.entry_price
-          )
-          *
-          trade.quantity
-        )
-        -
-        trade.brokerage
-
-      return acc + pnl
-
-    },
-
-    0
-
-  )
-
-  // TOTAL BROKERAGE
-  const totalBrokerage = filteredData.reduce(
-
-    (acc, trade) =>
-
-      acc + Number(trade.brokerage),
-
-    0
-
-  )
+  const balance =
+    totalIncome -
+    totalExpense
 
   return (
 
-    <DashboardLayout>
+    <div className="min-h-screen bg-[#fff7fa] p-8">
 
-      <main
-        className="min-h-screen p-6 text-black bg-cover bg-center bg-fixed"
-        style={{
+      {/* HEADER */}
+      <div className="flex items-center gap-5 mb-10">
 
-          backgroundImage:
-            "url('/images/ledger-bg.jpg')"
+        <div className="bg-white p-5 rounded-3xl shadow-md border border-pink-100">
 
-        }}
-      >
+          <Wallet
+            className="text-pink-600"
+            size={42}
+          />
 
-        {/* DARK OVERLAY */}
-        <div className="absolute inset-0 bg-black/40 -z-10"></div>
+        </div>
 
-        {/* PAGE TITLE */}
-        <div className="mb-8">
+        <div>
 
-          <h1 className="text-5xl font-bold text-white mb-2 drop-shadow-lg">
+          <h1 className="text-6xl font-black text-pink-700">
 
-            Live Trading Ledger
+            Trading Ledger
 
           </h1>
 
-          <p className="text-gray-200 text-lg">
+          <p className="text-pink-500 text-2xl mt-2">
 
-            Real-time trade tracking system
+            Track Trading Income & Expenses
 
           </p>
 
         </div>
 
-        {/* SUMMARY CARDS */}
-        <div className="grid md:grid-cols-3 gap-5 mb-8">
+      </div>
 
-          {/* TOTAL TRADES */}
-          <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 shadow-lg">
+      {/* STATS */}
+      <div className="grid grid-cols-3 gap-6 mb-10">
 
-            <p className="text-gray-500 mb-2">
+        {/* INCOME */}
+        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
 
-              Total Trades
+          <div className="flex items-center gap-4">
 
-            </p>
+            <ArrowDownCircle
+              className="text-green-600"
+              size={36}
+            />
 
-            <h2 className="text-4xl font-bold">
+            <p className="text-xl font-bold text-gray-600">
 
-              {filteredData.length}
-
-            </h2>
-
-          </div>
-
-          {/* LIVE PNL */}
-          <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 shadow-lg">
-
-            <p className="text-gray-500 mb-2">
-
-              Live Profit / Loss
+              Total Income
 
             </p>
 
-            <h2
-              className={`text-4xl font-bold ${
-                totalPNL >= 0
-
-                  ? 'text-green-600'
-
-                  : 'text-red-600'
-              }`}
-            >
-
-              ₹ {totalPNL.toFixed(2)}
-
-            </h2>
-
           </div>
 
-          {/* BROKERAGE */}
-          <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 shadow-lg">
+          <h2 className="text-5xl font-black text-green-600 mt-6">
 
-            <p className="text-gray-500 mb-2">
-
-              Total Brokerage
-
-            </p>
-
-            <h2 className="text-4xl font-bold">
-
-              ₹ {totalBrokerage.toFixed(2)}
-
-            </h2>
-
-          </div>
-
-        </div>
-
-        {/* FILTERS */}
-        <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg p-6 mb-8">
-
-          <h2 className="text-2xl font-bold mb-5">
-
-            🔍 Filter Ledger
+            ₹ {totalIncome}
 
           </h2>
 
-          <div className="grid md:grid-cols-2 gap-5">
+        </div>
 
-            {/* SEARCH */}
-            <input
-              type="text"
-              placeholder="Search Stock..."
-              value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
-              className="border border-pink-300 rounded-2xl p-4"
+        {/* EXPENSE */}
+        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
+
+          <div className="flex items-center gap-4">
+
+            <ArrowUpCircle
+              className="text-red-500"
+              size={36}
             />
 
-            {/* TRADE TYPE */}
+            <p className="text-xl font-bold text-gray-600">
+
+              Total Expense
+
+            </p>
+
+          </div>
+
+          <h2 className="text-5xl font-black text-red-500 mt-6">
+
+            ₹ {totalExpense}
+
+          </h2>
+
+        </div>
+
+        {/* BALANCE */}
+        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100">
+
+          <div className="flex items-center gap-4">
+
+            <Landmark
+              className="text-blue-600"
+              size={36}
+            />
+
+            <p className="text-xl font-bold text-gray-600">
+
+              Net Balance
+
+            </p>
+
+          </div>
+
+          <h2
+            className={`text-5xl font-black mt-6 ${
+              balance >= 0
+                ? 'text-blue-600'
+                : 'text-red-500'
+            }`}
+          >
+
+            ₹ {balance}
+
+          </h2>
+
+        </div>
+
+      </div>
+
+      {/* ADD TRANSACTION */}
+      <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100 mb-10">
+
+        <h2 className="text-4xl font-black text-gray-800 mb-8">
+
+          Add Transaction
+
+        </h2>
+
+        <div className="grid grid-cols-5 gap-6">
+
+          {/* TYPE */}
+          <div>
+
+            <label className="font-bold text-lg text-gray-700">
+
+              Type
+
+            </label>
+
             <select
-              value={tradeType}
+              value={type}
               onChange={(e) =>
-                setTradeType(e.target.value)
+                setType(
+                  e.target
+                    .value as
+                    'Income' | 'Expense'
+                )
               }
-              className="border border-pink-300 rounded-2xl p-4"
+              className="w-full mt-3 px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
             >
 
-              <option value="ALL">
+              <option value="Income">
 
-                ALL
-
-              </option>
-
-              <option value="BUY">
-
-                BUY
+                Income
 
               </option>
 
-              <option value="SELL">
+              <option value="Expense">
 
-                SELL
+                Expense
 
               </option>
 
@@ -359,246 +295,218 @@ export default function LedgerPage() {
 
           </div>
 
+          {/* CATEGORY */}
+          <div>
+
+            <label className="font-bold text-lg text-gray-700">
+
+              Category
+
+            </label>
+
+            <input
+              type="text"
+              value={category}
+              onChange={(e) =>
+                setCategory(
+                  e.target.value
+                )
+              }
+              placeholder="Brokerage"
+              className="w-full mt-3 px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
+            />
+
+          </div>
+
+          {/* AMOUNT */}
+          <div>
+
+            <label className="font-bold text-lg text-gray-700">
+
+              Amount
+
+            </label>
+
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) =>
+                setAmount(
+                  e.target.value
+                )
+              }
+              placeholder="1000"
+              className="w-full mt-3 px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
+            />
+
+          </div>
+
+          {/* NOTE */}
+          <div>
+
+            <label className="font-bold text-lg text-gray-700">
+
+              Note
+
+            </label>
+
+            <input
+              type="text"
+              value={note}
+              onChange={(e) =>
+                setNote(
+                  e.target.value
+                )
+              }
+              placeholder="Trade profit"
+              className="w-full mt-3 px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
+            />
+
+          </div>
+
+          {/* BUTTON */}
+          <div className="flex items-end">
+
+            <button
+              onClick={
+                handleAddTransaction
+              }
+              className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-4 rounded-2xl font-bold text-xl shadow-lg"
+            >
+
+              <Plus size={24} />
+
+              Add
+
+            </button>
+
+          </div>
+
         </div>
 
-        {/* TABLE */}
-        <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg p-6 overflow-x-auto">
+      </div>
 
-          <h2 className="text-3xl font-bold mb-6">
+      {/* TRANSACTION TABLE */}
+      <div className="bg-white rounded-3xl shadow-md border border-pink-100 overflow-hidden">
 
-            📒 Live Ledger Records
+        {/* HEADER */}
+        <div className="grid grid-cols-6 bg-pink-50 px-8 py-6 font-black text-xl text-gray-700">
 
-          </h2>
+          <p>Type</p>
 
-          <table className="w-full">
+          <p>Category</p>
 
-            <thead>
+          <p>Amount</p>
 
-              <tr className="border-b">
+          <p>Note</p>
 
-                <th className="p-3 text-left">
+          <p>Date</p>
 
-                  S.No
+          <p>Delete</p>
 
-                </th>
+        </div>
 
-                <th className="p-3 text-left">
+        {/* ROWS */}
+        {transactions.length > 0 ? (
 
-                  Stock
+          transactions.map(
+            (
+              item,
+              index
+            ) => (
 
-                </th>
+              <div
+                key={index}
+                className="grid grid-cols-6 px-8 py-6 border-t border-pink-100 items-center"
+              >
 
-                <th className="p-3 text-left">
+                {/* TYPE */}
+                <div>
 
-                  Type
+                  <span
+                    className={`px-5 py-2 rounded-2xl text-white font-bold text-lg ${
+                      item.type ===
+                      'Income'
+                        ? 'bg-green-500'
+                        : 'bg-red-500'
+                    }`}
+                  >
 
-                </th>
+                    {item.type}
 
-                <th className="p-3 text-left">
+                  </span>
 
-                  Qty
+                </div>
 
-                </th>
+                {/* CATEGORY */}
+                <p className="font-bold text-xl">
 
-                <th className="p-3 text-left">
+                  {item.category}
 
-                  Entry
+                </p>
 
-                </th>
+                {/* AMOUNT */}
+                <p
+                  className={`font-black text-2xl ${
+                    item.type ===
+                    'Income'
+                      ? 'text-green-600'
+                      : 'text-red-500'
+                  }`}
+                >
 
-                <th className="p-3 text-left">
+                  ₹ {item.amount}
 
-                  LTP
+                </p>
 
-                </th>
+                {/* NOTE */}
+                <p className="text-lg text-gray-600">
 
-                <th className="p-3 text-left">
+                  {item.note}
 
-                  Current Value
+                </p>
 
-                </th>
+                {/* DATE */}
+                <p className="font-bold text-lg">
 
-                <th className="p-3 text-left">
+                  {item.date}
 
-                  Live P/L
+                </p>
 
-                </th>
-
-                <th className="p-3 text-left">
-
-                  Brokerage
-
-                </th>
-
-                <th className="p-3 text-left">
-
-                  Trade Date
-
-                </th>
-
-                <th className="p-3 text-left">
-
-                  Exit Date
-
-                </th>
-
-                <th className="p-3 text-left">
-
-                  Notes
-
-                </th>
-
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              {filteredData.map(
-
-                (trade, index) => {
-
-                  const ltp =
-
-                    livePrices[trade.stock]
-
-                    ||
-
-                    trade.exit_price
-
-                  const currentValue =
-
-                    ltp * trade.quantity
-
-                  const livePNL =
-
-                    (
-                      (
-                        ltp -
-                        trade.entry_price
-                      )
-                      *
-                      trade.quantity
+                {/* DELETE */}
+                <button
+                  onClick={() =>
+                    handleDelete(
+                      item.id
                     )
-                    -
-                    trade.brokerage
+                  }
+                  className="text-red-500 hover:text-red-700"
+                >
 
-                  return (
+                  <Trash2
+                    size={26}
+                  />
 
-                    <tr
-                      key={trade.id}
-                      className="border-b hover:bg-pink-50/50"
-                    >
+                </button>
 
-                      {/* SERIAL */}
-                      <td className="p-3">
+              </div>
 
-                        {index + 1}
+            )
+          )
 
-                      </td>
+        ) : (
 
-                      {/* STOCK */}
-                      <td className="p-3 font-bold">
+          <div className="p-10 text-center text-gray-500 text-2xl">
 
-                        {trade.stock}
+            No transactions added yet.
 
-                      </td>
+          </div>
 
-                      {/* TYPE */}
-                      <td className="p-3">
+        )}
 
-                        {trade.type}
+      </div>
 
-                      </td>
-
-                      {/* QUANTITY */}
-                      <td className="p-3">
-
-                        {trade.quantity}
-
-                      </td>
-
-                      {/* ENTRY */}
-                      <td className="p-3">
-
-                        ₹ {trade.entry_price}
-
-                      </td>
-
-                      {/* LTP */}
-                      <td className="p-3 font-bold text-blue-600">
-
-                        ₹ {ltp?.toFixed(2)}
-
-                      </td>
-
-                      {/* CURRENT VALUE */}
-                      <td className="p-3 font-bold">
-
-                        ₹ {currentValue.toFixed(2)}
-
-                      </td>
-
-                      {/* LIVE PNL */}
-                      <td
-                        className={`p-3 font-bold ${
-                          livePNL >= 0
-
-                            ? 'text-green-600'
-
-                            : 'text-red-600'
-                        }`}
-                      >
-
-                        ₹ {livePNL.toFixed(2)}
-
-                      </td>
-
-                      {/* BROKERAGE */}
-                      <td className="p-3">
-
-                        ₹ {trade.brokerage}
-
-                      </td>
-
-                      {/* TRADE DATE */}
-                      <td className="p-3">
-
-                        {trade.trade_date}
-
-                      </td>
-
-                      {/* EXIT DATE */}
-                      <td className="p-3">
-
-                        {trade.exit_date}
-
-                      </td>
-
-                      {/* NOTES */}
-                      <td className="p-3">
-
-                        {trade.notes}
-
-                      </td>
-
-                    </tr>
-
-                  )
-
-                }
-
-              )}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </main>
-
-    </DashboardLayout>
+    </div>
 
   )
 
