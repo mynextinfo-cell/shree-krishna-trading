@@ -1,63 +1,105 @@
-import yahooFinance from 'yahoo-finance2'
+import yahooFinance from "yahoo-finance2";
 
 export async function getMarketData() {
 
   try {
 
-    const nifty = await yahooFinance.quote('^NSEI')
+    // FETCH DATA
+    const nifty: any =
+      await yahooFinance.quote("^NSEI");
 
-    const banknifty = await yahooFinance.quote('^NSEBANK')
+    const banknifty: any =
+      await yahooFinance.quote("^NSEBANK");
 
-    const sensex = await yahooFinance.quote('^BSESN')
+    const sensex: any =
+      await yahooFinance.quote("^BSESN");
+
+    const bitcoin: any =
+      await yahooFinance.quote("BTC-USD");
+
+    // RETURN FORMATTED DATA
+    return [
+
+      {
+        name: "NIFTY 50",
+
+        value: Number(
+          nifty?.regularMarketPrice || 0
+        ).toFixed(2),
+
+        change: Number(
+          nifty?.regularMarketChangePercent || 0
+        ).toFixed(2),
+      },
+
+      {
+        name: "BANK NIFTY",
+
+        value: Number(
+          banknifty?.regularMarketPrice || 0
+        ).toFixed(2),
+
+        change: Number(
+          banknifty?.regularMarketChangePercent || 0
+        ).toFixed(2),
+      },
+
+      {
+        name: "SENSEX",
+
+        value: Number(
+          sensex?.regularMarketPrice || 0
+        ).toFixed(2),
+
+        change: Number(
+          sensex?.regularMarketChangePercent || 0
+        ).toFixed(2),
+      },
+
+      {
+        name: "BITCOIN",
+
+        value: Number(
+          bitcoin?.regularMarketPrice || 0
+        ).toFixed(2),
+
+        change: Number(
+          bitcoin?.regularMarketChangePercent || 0
+        ).toFixed(2),
+      },
+
+    ];
+
+  } catch (error) {
+
+    console.log(error);
 
     return [
 
       {
-        name: 'NIFTY 50',
-
-        value: nifty.regularMarketPrice?.toFixed(2),
-
-        change:
-          nifty.regularMarketChangePercent?.toFixed(2),
-
-        positive:
-          (nifty.regularMarketChangePercent || 0) > 0,
+        name: "NIFTY 50",
+        value: "0.00",
+        change: "0.00",
       },
 
       {
-        name: 'BANKNIFTY',
-
-        value:
-          banknifty.regularMarketPrice?.toFixed(2),
-
-        change:
-          banknifty.regularMarketChangePercent?.toFixed(2),
-
-        positive:
-          (banknifty.regularMarketChangePercent || 0) > 0,
+        name: "BANK NIFTY",
+        value: "0.00",
+        change: "0.00",
       },
 
       {
-        name: 'SENSEX',
-
-        value:
-          sensex.regularMarketPrice?.toFixed(2),
-
-        change:
-          sensex.regularMarketChangePercent?.toFixed(2),
-
-        positive:
-          (sensex.regularMarketChangePercent || 0) > 0,
+        name: "SENSEX",
+        value: "0.00",
+        change: "0.00",
       },
 
-    ]
+      {
+        name: "BITCOIN",
+        value: "0.00",
+        change: "0.00",
+      },
 
-  } catch (error) {
-
-    console.error(error)
-
-    return []
-
+    ];
   }
-
 }
