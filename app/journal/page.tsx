@@ -1,527 +1,751 @@
-'use client'
+"use client";
 
-import {
-  useEffect,
-  useState,
-} from 'react'
+import { useEffect, useState } from "react";
 
-import {
-  Plus,
-  Trash2,
-  Pencil,
-  BookOpen,
-} from 'lucide-react'
+import Sidebar from "@/components/Sidebar";
 
-import Sidebar from '@/components/Sidebar'
+import { Trade } from "@/components/journal/types";
 
-import { supabase } from '@/lib/supabase'
+import AnalyticsCard from "@/components/journal/AnalyticsCard";
 
-type Trade = {
-  id: number
-  stock: string
-  type: string
-  entry: number
-  exit: number
-  quantity: number
-  notes: string
-}
+import MonthlyPerformance from "@/components/journal/MonthlyPerformance";
+
+import EquityCurve from "@/components/journal/EquityCurve";
+
+import TradeHistory from "@/components/journal/TradeHistory";
+
+import TradeForm from "@/components/journal/TradeForm";
+
+import ExportCSV from "@/components/journal/ExportCSV";
+
+import ExportPDF from "@/components/journal/ExportPDF";
+
+import { supabase } from "@/lib/supabase";
 
 export default function JournalPage() {
 
-  const [trades, setTrades] =
-    useState<Trade[]>([])
+  // TODAY DATE
 
-  const [stock, setStock] =
-    useState('')
+  const today =
+    new Date()
+      .toISOString()
+      .split("T")[0];
 
-  const [type, setType] =
-    useState('BUY')
+  // FORM STATES
 
-  const [entry, setEntry] =
-    useState('')
+  const [date, setDate] =
+    useState(today);
 
-  const [exit, setExit] =
-    useState('')
+  const [symbol, setSymbol] =
+    useState("");
+
+  const [tradeType, setTradeType] =
+    useState("BUY");
+
+  const [entryPrice, setEntryPrice] =
+    useState("");
+
+  const [exitPrice, setExitPrice] =
+    useState("");
 
   const [quantity, setQuantity] =
-    useState('')
+    useState("");
+
+  const [brokerage, setBrokerage] =
+    useState("");
 
   const [notes, setNotes] =
-    useState('')
+    useState("");
 
-  const [editingId, setEditingId] =
-    useState<number | null>(
-      null
-    )
+  // TRADE STATES
+
+  const [trades, setTrades] =
+    useState<Trade[]>([]);
+
+  const [editIndex, setEditIndex] =
+    useState<number | null>(null);
 
   // FETCH TRADES
+
+  useEffect(() => {
+
+    fetchTrades();
+
+  }, []);
+
   const fetchTrades =
     async () => {
 
       const {
         data,
+        error,
       } = await supabase
-        .from('trades')
-        .select('*')
+        .from("trades")
+        .select("*")
         .order(
-          'id',
+          "created_at",
           {
             ascending: false,
           }
-        )
+        );
 
-      if (data) {
+      if (error) {
 
-        setTrades(data)
+        alert(
+          error.message
+        );
 
+        return;
       }
 
+      const formattedTrades =
+        data.map(
+          (trade) => ({
+
+            id: trade.id,
+
+            created_at:
+              trade.created_at,
+
+            date:
+              trade.date,
+
+            symbol:
+              trade.symbol,
+
+            tradeType:
+              trade.trade_type,
+
+            entryPrice:
+              Number(
+                trade.entry_price
+              ),
+
+            exitPrice:
+              Number(
+                trade.exit_price
+              ),
+
+            quantity:
+              Number(
+                trade.quantity
+              ),
+
+            brokerage:
+              Number(
+                trade.brokerage
+              ),
+
+            notes:
+              trade.notes,
+
+            grossPnL:
+              Number(
+                trade.gross_pnl
+              ),
+
+            netPnL:
+              Number(
+                trade.net_pnl
+              ),
+          }))
+;
+
+      setTrades(
+        formattedTrades
+      );
+    };
+
+  // CALCULATE GROSS PNL
+
+  const calculateGrossPnL = () => {
+
+    const entry =
+      Number(entryPrice);
+
+    const exit =
+      Number(exitPrice);
+
+    const qty =
+      Number(quantity);
+
+    if (tradeType === "BUY") {
+
+      return (
+        (exit - entry) * qty
+      );
     }
 
-  useEffect(() => {
+    return (
+      (entry - exit) * qty
+    );
+  };
 
-    fetchTrades()
+  const grossPnL =
+    calculateGrossPnL();
 
-  }, [])
+  // NET PNL
 
-  // ADD / UPDATE TRADE
-  const handleSaveTrade =
+  const netPnL =
+    grossPnL -
+    Number(
+      brokerage || 0
+    );
+
+  // RESET FORM
+
+  const resetForm = () => {
+
+    setDate(today);
+
+    setSymbol("");
+
+    setTradeType("BUY");
+
+    setEntryPrice("");
+
+    setExitPrice("");
+
+    setQuantity("");
+
+    setBrokerage("");
+
+    setNotes("");
+
+    setEditIndex(null);
+  };
+
+  // SAVE / UPDATE TRADE
+
+  const saveTrade =
     async () => {
 
       if (
-        !stock ||
-        !entry ||
-        !exit ||
+        !symbol ||
+        !entryPrice ||
+        !exitPrice ||
         !quantity
-      ) return
+      ) {
 
-      if (editingId) {
+        alert(
+          "Please fill all required fields."
+        );
 
-        await supabase
-          .from('trades')
-          .update({
-
-            stock,
-
-            type,
-
-            entry:
-              Number(entry),
-
-            exit:
-              Number(exit),
-
-            quantity:
-              Number(quantity),
-
-            notes,
-
-          })
-          .eq(
-            'id',
-            editingId
-          )
-
-      } else {
-
-        await supabase
-          .from('trades')
-          .insert([{
-
-            stock,
-
-            type,
-
-            entry:
-              Number(entry),
-
-            exit:
-              Number(exit),
-
-            quantity:
-              Number(quantity),
-
-            notes,
-
-          }])
-
+        return;
       }
 
-      // RESET FORM
-      setStock('')
-      setType('BUY')
-      setEntry('')
-      setExit('')
-      setQuantity('')
-      setNotes('')
-      setEditingId(null)
+      // UPDATE TRADE
 
-      fetchTrades()
+      if (
+        editIndex !== null
+      ) {
 
-    }
+        const trade =
+          trades[
+            editIndex
+          ];
+
+        const {
+          error,
+        } = await supabase
+          .from("trades")
+          .update({
+
+            date: date,
+
+            symbol:
+              symbol,
+
+            trade_type:
+              tradeType,
+
+            entry_price:
+              Number(
+                entryPrice
+              ),
+
+            exit_price:
+              Number(
+                exitPrice
+              ),
+
+            quantity:
+              Number(
+                quantity
+              ),
+
+            brokerage:
+              Number(
+                brokerage || 0
+              ),
+
+            notes: notes,
+
+            gross_pnl:
+              grossPnL,
+
+            net_pnl:
+              netPnL,
+          })
+          .eq(
+            "id",
+            trade.id
+          );
+
+        if (error) {
+
+          alert(
+            error.message
+          );
+
+          return;
+        }
+
+        await fetchTrades();
+
+        resetForm();
+
+        return;
+      }
+
+      // INSERT TRADE
+
+      const {
+        error,
+      } = await supabase
+        .from("trades")
+        .insert([{
+
+          date: date,
+
+          symbol:
+            symbol,
+
+          trade_type:
+            tradeType,
+
+          entry_price:
+            Number(
+              entryPrice
+            ),
+
+          exit_price:
+            Number(
+              exitPrice
+            ),
+
+          quantity:
+            Number(
+              quantity
+            ),
+
+          brokerage:
+            Number(
+              brokerage || 0
+            ),
+
+          notes: notes,
+
+          gross_pnl:
+            grossPnL,
+
+          net_pnl:
+            netPnL,
+        }]);
+
+      if (error) {
+
+        alert(
+          error.message
+        );
+
+        return;
+      }
+
+      await fetchTrades();
+
+      resetForm();
+    };
 
   // DELETE TRADE
-  const handleDelete =
+
+  const deleteTrade =
     async (
-      id: number
+      indexToDelete: number
     ) => {
 
-      await supabase
-        .from('trades')
+      const trade =
+        trades[
+          indexToDelete
+        ];
+
+      const {
+        error,
+      } = await supabase
+        .from("trades")
         .delete()
-        .eq('id', id)
+        .eq(
+          "id",
+          trade.id
+        );
 
-      fetchTrades()
+      if (error) {
 
-    }
+        alert(
+          error.message
+        );
+
+        return;
+      }
+
+      await fetchTrades();
+    };
 
   // EDIT TRADE
-  const handleEdit =
-    (trade: Trade) => {
 
-      setEditingId(
-        trade.id
-      )
+  const editTrade = (
+    trade: Trade,
+    index: number
+  ) => {
 
-      setStock(
-        trade.stock
-      )
+    setDate(trade.date);
 
-      setType(
-        trade.type
-      )
+    setSymbol(
+      trade.symbol
+    );
 
-      setEntry(
-        String(
-          trade.entry
+    setTradeType(
+      trade.tradeType
+    );
+
+    setEntryPrice(
+      trade.entryPrice.toString()
+    );
+
+    setExitPrice(
+      trade.exitPrice.toString()
+    );
+
+    setQuantity(
+      trade.quantity.toString()
+    );
+
+    setBrokerage(
+      trade.brokerage.toString()
+    );
+
+    setNotes(
+      trade.notes
+    );
+
+    setEditIndex(index);
+
+    window.scrollTo({
+
+      top: 0,
+
+      behavior:
+        "smooth",
+    });
+  };
+
+  // ANALYTICS
+
+  const totalTrades =
+    trades.length;
+
+  const winningTrades =
+    trades.filter(
+      (trade) =>
+        trade.netPnL > 0
+    ).length;
+
+  const losingTrades =
+    trades.filter(
+      (trade) =>
+        trade.netPnL < 0
+    ).length;
+
+  const totalNetPnL =
+    trades.reduce(
+      (acc, trade) =>
+        acc +
+        trade.netPnL,
+      0
+    );
+
+  const winRate =
+    totalTrades > 0
+      ? (
+          (winningTrades /
+            totalTrades) *
+          100
+        ).toFixed(1)
+      : "0";
+
+  const bestTrade =
+    trades.length > 0
+      ? Math.max(
+          ...trades.map(
+            (trade) =>
+              trade.netPnL
+          )
         )
-      )
+      : 0;
 
-      setExit(
-        String(
-          trade.exit
+  const worstTrade =
+    trades.length > 0
+      ? Math.min(
+          ...trades.map(
+            (trade) =>
+              trade.netPnL
+          )
         )
-      )
+      : 0;
 
-      setQuantity(
-        String(
-          trade.quantity
-        )
-      )
+  // EQUITY CURVE
 
-      setNotes(
-        trade.notes
-      )
+  let cumulativePnL = 0;
 
+  const equityCurveData =
+    trades
+      .slice()
+      .reverse()
+      .map(
+        (
+          trade,
+          index
+        ) => {
+
+          cumulativePnL +=
+            trade.netPnL;
+
+          return {
+
+            trade:
+              index + 1,
+
+            equity:
+              cumulativePnL,
+          };
+        }
+      );
+
+  // MONTHLY PERFORMANCE
+
+  const monthlyMap:
+    Record<
+      string,
+      number
+    > = {};
+
+  trades.forEach(
+    (trade) => {
+
+      const month =
+        new Date(
+          trade.date
+        ).toLocaleString(
+          "default",
+          {
+
+            month:
+              "long",
+
+            year:
+              "numeric",
+          }
+        );
+
+      monthlyMap[
+        month
+      ] =
+        (
+          monthlyMap[
+            month
+          ] || 0
+        ) +
+        trade.netPnL;
     }
+  );
+
+  const monthlyPerformance =
+    Object.entries(
+      monthlyMap
+    );
 
   return (
 
-    <div className="min-h-screen bg-[#fff7fa] flex">
+    <div className="flex min-h-screen bg-[#fff1f7]">
 
       {/* SIDEBAR */}
+
       <Sidebar />
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 p-8 overflow-y-auto">
+      {/* MAIN */}
+
+      <main className="flex-1 p-4 md:p-6 overflow-y-auto">
 
         {/* HEADER */}
-        <div className="flex items-center gap-5 mb-10">
 
-          <div className="bg-white p-5 rounded-3xl shadow-md border border-pink-100">
+        <div className="bg-pink-500 rounded-3xl px-8 py-6 shadow-xl mb-6">
 
-            <BookOpen
-              className="text-pink-600"
-              size={42}
-            />
+          <h1 className="text-5xl font-extrabold text-white">
 
-          </div>
+            Trading Journal
 
-          <div>
+          </h1>
 
-            <h1 className="text-6xl font-black text-pink-700">
+          <p className="text-white/90 mt-2 text-xl">
 
-              Trading Journal
+            Professional Trade Tracking System
 
-            </h1>
-
-            <p className="text-pink-500 text-2xl mt-2">
-
-              Track & Analyze Your Trades
-
-            </p>
-
-          </div>
+          </p>
 
         </div>
 
-        {/* FORM */}
-        <div className="bg-white rounded-3xl p-8 shadow-md border border-pink-100 mb-10">
+        {/* ANALYTICS */}
 
-          <h2 className="text-4xl font-black text-gray-800 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
 
-            {editingId
-              ? 'Edit Trade'
-              : 'Add New Trade'}
-
-          </h2>
-
-          <div className="grid grid-cols-3 gap-6">
-
-            {/* STOCK */}
-            <input
-              type="text"
-              placeholder="Stock Name"
-              value={stock}
-              onChange={(e) =>
-                setStock(
-                  e.target.value
-                )
-              }
-              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
-            />
-
-            {/* TYPE */}
-            <select
-              value={type}
-              onChange={(e) =>
-                setType(
-                  e.target.value
-                )
-              }
-              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
-            >
-
-              <option value="BUY">
-
-                BUY
-
-              </option>
-
-              <option value="SELL">
-
-                SELL
-
-              </option>
-
-            </select>
-
-            {/* ENTRY */}
-            <input
-              type="number"
-              placeholder="Entry Price"
-              value={entry}
-              onChange={(e) =>
-                setEntry(
-                  e.target.value
-                )
-              }
-              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
-            />
-
-            {/* EXIT */}
-            <input
-              type="number"
-              placeholder="Exit Price"
-              value={exit}
-              onChange={(e) =>
-                setExit(
-                  e.target.value
-                )
-              }
-              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
-            />
-
-            {/* QUANTITY */}
-            <input
-              type="number"
-              placeholder="Quantity"
-              value={quantity}
-              onChange={(e) =>
-                setQuantity(
-                  e.target.value
-                )
-              }
-              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
-            />
-
-            {/* NOTES */}
-            <input
-              type="text"
-              placeholder="Trade Notes"
-              value={notes}
-              onChange={(e) =>
-                setNotes(
-                  e.target.value
-                )
-              }
-              className="px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
-            />
-
-          </div>
-
-          {/* BUTTON */}
-          <button
-            onClick={
-              handleSaveTrade
+          <AnalyticsCard
+            title="Total Trades"
+            value={
+              totalTrades
             }
-            className="mt-8 flex items-center gap-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-8 py-4 rounded-2xl font-bold text-xl shadow-lg"
-          >
+            color="text-zinc-800"
+          />
 
-            <Plus size={24} />
+          <AnalyticsCard
+            title="Winning"
+            value={
+              winningTrades
+            }
+            color="text-green-500"
+          />
 
-            {editingId
-              ? 'Update Trade'
-              : 'Add Trade'}
+          <AnalyticsCard
+            title="Losing"
+            value={
+              losingTrades
+            }
+            color="text-red-500"
+          />
 
-          </button>
+          <AnalyticsCard
+            title="Win Rate"
+            value={`${winRate}%`}
+            color="text-blue-500"
+          />
 
-        </div>
+          <AnalyticsCard
+            title="Best Trade"
+            value={`₹${bestTrade.toFixed(0)}`}
+            color="text-green-500"
+          />
 
-        {/* TABLE */}
-        <div className="bg-white rounded-3xl shadow-md border border-pink-100 overflow-hidden">
-
-          {/* HEADER */}
-          <div className="grid grid-cols-8 bg-pink-50 px-8 py-6 font-black text-lg text-gray-700">
-
-            <p>Stock</p>
-            <p>Type</p>
-            <p>Entry</p>
-            <p>Exit</p>
-            <p>Qty</p>
-            <p>P/L</p>
-            <p>Edit</p>
-            <p>Delete</p>
-
-          </div>
-
-          {/* ROWS */}
-          {trades.length > 0 ? (
-
-            trades.map(
-              (
-                trade,
-                index
-              ) => {
-
-                const pnl =
-                  (
-                    trade.exit -
-                    trade.entry
-                  ) *
-                  trade.quantity
-
-                return (
-
-                  <div
-                    key={index}
-                    className="grid grid-cols-8 px-8 py-6 border-t border-pink-100 items-center"
-                  >
-
-                    <p className="font-black text-xl">
-
-                      {trade.stock}
-
-                    </p>
-
-                    <p
-                      className={`font-bold ${
-                        trade.type ===
-                        'BUY'
-                          ? 'text-green-600'
-                          : 'text-red-500'
-                      }`}
-                    >
-
-                      {trade.type}
-
-                    </p>
-
-                    <p>
-
-                      ₹ {trade.entry}
-
-                    </p>
-
-                    <p>
-
-                      ₹ {trade.exit}
-
-                    </p>
-
-                    <p>
-
-                      {trade.quantity}
-
-                    </p>
-
-                    <p
-                      className={`font-black ${
-                        pnl >= 0
-                          ? 'text-green-600'
-                          : 'text-red-500'
-                      }`}
-                    >
-
-                      ₹ {pnl}
-
-                    </p>
-
-                    {/* EDIT */}
-                    <button
-                      onClick={() =>
-                        handleEdit(
-                          trade
-                        )
-                      }
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-
-                      <Pencil
-                        size={24}
-                      />
-
-                    </button>
-
-                    {/* DELETE */}
-                    <button
-                      onClick={() =>
-                        handleDelete(
-                          trade.id
-                        )
-                      }
-                      className="text-red-500 hover:text-red-700"
-                    >
-
-                      <Trash2
-                        size={24}
-                      />
-
-                    </button>
-
-                  </div>
-
-                )
-
-              }
-            )
-
-          ) : (
-
-            <div className="p-10 text-center text-gray-500 text-2xl">
-
-              No trades added yet.
-
-            </div>
-
-          )}
+          <AnalyticsCard
+            title="Worst Trade"
+            value={`₹${worstTrade.toFixed(0)}`}
+            color="text-red-500"
+          />
 
         </div>
 
-      </div>
+        {/* MONTHLY PERFORMANCE */}
+
+        <MonthlyPerformance
+          monthlyPerformance={
+            monthlyPerformance
+          }
+        />
+
+        {/* EQUITY CURVE */}
+
+        <EquityCurve
+          equityCurveData={
+            equityCurveData
+          }
+        />
+
+        {/* TRADE FORM */}
+
+        <TradeForm
+          date={date}
+          setDate={setDate}
+          symbol={symbol}
+          setSymbol={setSymbol}
+          tradeType={tradeType}
+          setTradeType={setTradeType}
+          entryPrice={entryPrice}
+          setEntryPrice={setEntryPrice}
+          exitPrice={exitPrice}
+          setExitPrice={setExitPrice}
+          quantity={quantity}
+          setQuantity={setQuantity}
+          brokerage={brokerage}
+          setBrokerage={setBrokerage}
+          notes={notes}
+          setNotes={setNotes}
+          grossPnL={grossPnL}
+          netPnL={netPnL}
+          editIndex={
+            editIndex
+          }
+          onSave={
+            saveTrade
+          }
+          onCancelEdit={
+            resetForm
+          }
+        />
+
+        {/* EXPORT BUTTONS */}
+
+        <div className="flex flex-wrap justify-end gap-4 mb-6">
+
+          <ExportCSV
+            trades={trades}
+          />
+
+          <ExportPDF
+            trades={trades}
+            totalTrades={
+              totalTrades
+            }
+            winningTrades={
+              winningTrades
+            }
+            losingTrades={
+              losingTrades
+            }
+            totalNetPnL={
+              totalNetPnL
+            }
+            winRate={
+              winRate
+            }
+          />
+
+        </div>
+
+        {/* TRADE HISTORY */}
+
+        <TradeHistory
+          trades={trades}
+          totalNetPnL={
+            totalNetPnL
+          }
+          onEdit={
+            editTrade
+          }
+          onDelete={
+            deleteTrade
+          }
+        />
+
+      </main>
 
     </div>
-
-  )
-
+  );
 }

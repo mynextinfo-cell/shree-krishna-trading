@@ -1,376 +1,83 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-import {
-  Plus,
-  TrendingUp,
-  Wallet,
-  Target,
-  LogOut,
-} from "lucide-react";
-
-import { useRouter } from "next/navigation";
-
 import Sidebar from "@/components/Sidebar";
-import MarketOverview from "@/components/MarketOverview";
-import AnalyticsChart from "@/components/AnalyticsChart";
-import LiveChart from "@/components/LiveChart";
-import MarketNews from "@/components/MarketNews";
-import AIAssistant from "@/components/AIAssistant";
-
-import { supabase } from "@/lib/supabase";
+import TradingViewChart from "@/components/TradingViewChart";
+import MarketTicker from "@/components/MarketTicker";
 
 export default function DashboardPage() {
 
-  const router = useRouter();
-
-  // USER
-  const [user, setUser] = useState<any>(null);
-
-  // FORM STATES
-  const [stockName, setStockName] = useState("");
-  const [strategyName, setStrategyName] = useState("");
-  const [tradeType, setTradeType] = useState("BUY");
-  const [buyDate, setBuyDate] = useState("");
-  const [sellDate, setSellDate] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [buyPrice, setBuyPrice] = useState("");
-  const [sellPrice, setSellPrice] = useState("");
-  const [notes, setNotes] = useState("");
-
-  // SCREENSHOT
-  const [screenshot, setScreenshot] =
-    useState<any>(null);
-
-  // TRADES
-  const [trades, setTrades] = useState<any[]>([]);
-
-  // GET USER
-  const getUser = async () => {
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-
-      router.push("/auth");
-
-    } else {
-
-      setUser(user);
-    }
-  };
-
-  // FETCH TRADES
-  const fetchTrades = async () => {
-
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("trades")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", {
-        ascending: false,
-      });
-
-    if (error) {
-
-      console.log(error);
-
-    } else {
-
-      setTrades(data || []);
-    }
-  };
-
-  // LOAD USER
-  useEffect(() => {
-
-    getUser();
-
-  }, []);
-
-  // LOAD TRADES
-  useEffect(() => {
-
-    if (user) {
-      fetchTrades();
-    }
-
-  }, [user]);
-
-  // IMAGE UPLOAD
-  const uploadImage = async () => {
-
-    if (!screenshot) return null;
-
-    const fileName =
-      `${Date.now()}-${screenshot.name}`;
-
-    const { error } = await supabase.storage
-      .from("trade-images")
-      .upload(fileName, screenshot);
-
-    if (error) {
-
-      console.log(error);
-
-      return null;
-    }
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage
-      .from("trade-images")
-      .getPublicUrl(fileName);
-
-    return publicUrl;
-  };
-
-  // SAVE TRADE
-  const saveTrade = async () => {
-
-    if (!user) {
-
-      alert("Please login first");
-
-      return;
-    }
-
-    try {
-
-      // UPLOAD IMAGE
-      const imageUrl =
-        await uploadImage();
-
-      const { error } = await supabase
-        .from("trades")
-        .insert([
-          {
-            stock_name: stockName,
-            strategy_name: strategyName,
-            trade_type: tradeType,
-            buy_date: buyDate,
-            sell_date: sellDate,
-            quantity: Number(quantity),
-            buy_price: Number(buyPrice),
-            sell_price: Number(sellPrice),
-            notes: notes,
-            screenshot: imageUrl,
-            user_id: user.id,
-          },
-        ]);
-
-      if (error) {
-
-        console.log(error);
-
-        alert(JSON.stringify(error));
-
-      } else {
-
-        alert("Trade Saved Successfully ✅");
-
-        fetchTrades();
-
-        // CLEAR FORM
-        setStockName("");
-        setStrategyName("");
-        setTradeType("BUY");
-        setBuyDate("");
-        setSellDate("");
-        setQuantity("");
-        setBuyPrice("");
-        setSellPrice("");
-        setNotes("");
-        setScreenshot(null);
-      }
-
-    } catch (err: any) {
-
-      console.log(err);
-
-      alert(err.message);
-    }
-  };
-
-  // LOGOUT
-  const logout = async () => {
-
-    await supabase.auth.signOut();
-
-    router.push("/auth");
-  };
-
-  // ANALYTICS
-  const totalTrades = trades.length;
-
-  const totalPnL = trades.reduce(
-    (acc, trade) => {
-
-      const pnl =
-        (
-          Number(trade.sell_price || 0) -
-          Number(trade.buy_price || 0)
-        ) *
-        Number(trade.quantity || 0);
-
-      return acc + pnl;
-
+  const marketData = [
+    {
+      name: "NIFTY 50",
+      value: "24,850.35",
+      change: "+125.40",
+      positive: true,
     },
-    0
-  );
-
-  const winningTrades = trades.filter(
-    (trade) => {
-
-      const pnl =
-        (
-          Number(trade.sell_price || 0) -
-          Number(trade.buy_price || 0)
-        ) *
-        Number(trade.quantity || 0);
-
-      return pnl > 0;
-    }
-  );
-
-  const winRate =
-    totalTrades > 0
-      ? (
-          (winningTrades.length /
-            totalTrades) *
-          100
-        ).toFixed(1)
-      : 0;
+    {
+      name: "BANKNIFTY",
+      value: "53,120.80",
+      change: "-210.25",
+      positive: false,
+    },
+    {
+      name: "SENSEX",
+      value: "81,245.65",
+      change: "+310.75",
+      positive: true,
+    },
+    {
+      name: "NASDAQ",
+      value: "19,210.45",
+      change: "+95.15",
+      positive: true,
+    },
+  ];
 
   return (
 
-    <div className="flex bg-black text-white">
+    <div className="flex min-h-screen bg-[#fff1f7]">
 
       {/* SIDEBAR */}
+
       <Sidebar />
 
-      {/* MAIN */}
-      <main className="flex-1 min-h-screen p-6 md:p-10 pt-24 md:pt-10">
+      {/* MAIN CONTENT */}
+
+      <main className="flex-1 p-4 md:p-6 overflow-y-auto">
 
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
 
-          <div>
+        <div className="bg-orange-500 rounded-3xl px-8 py-6 shadow-xl mb-6">
 
-            <h1 className="text-4xl md:text-5xl font-bold">
-              Trading Dashboard
-            </h1>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-            <p className="text-zinc-400 mt-3">
-              Professional trading journal & analytics
-            </p>
+            {/* LEFT */}
 
-            {user && (
-              <p className="text-violet-400 mt-3 text-sm">
-                Logged in as: {user.email}
+            <div>
+
+              <h1 className="text-5xl font-extrabold text-white tracking-wide">
+
+                Shree Krishna Trading
+
+              </h1>
+
+              <p className="text-white/90 mt-2 text-xl">
+
+                Trust Commitment Growth
+
               </p>
-            )}
-
-          </div>
-
-          {/* LOGOUT */}
-          <button
-            onClick={logout}
-            className="flex items-center gap-3 bg-red-600 hover:bg-red-700 transition rounded-2xl px-6 py-4 font-bold"
-          >
-            <LogOut size={20} />
-            Logout
-          </button>
-
-        </div>
-
-        {/* MARKET OVERVIEW */}
-        <MarketOverview />
-
-        {/* ANALYTICS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
-
-          {/* TOTAL TRADES */}
-          <div className="bg-[#07122b] border border-zinc-800 rounded-3xl p-6">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-
-                <p className="text-zinc-400">
-                  Total Trades
-                </p>
-
-                <h2 className="text-4xl font-bold mt-3">
-                  {totalTrades}
-                </h2>
-
-              </div>
-
-              <div className="bg-violet-500/20 p-4 rounded-2xl">
-                <Wallet size={32} />
-              </div>
 
             </div>
 
-          </div>
+            {/* RIGHT */}
 
-          {/* TOTAL PNL */}
-          <div className="bg-[#07122b] border border-zinc-800 rounded-3xl p-6">
+            <div className="bg-orange-400/40 rounded-2xl px-6 py-4 backdrop-blur-md">
 
-            <div className="flex items-center justify-between">
+              <p className="text-white text-lg font-semibold">
 
-              <div>
+                Chairman: Sanjay Mondal
 
-                <p className="text-zinc-400">
-                  Total P/L
-                </p>
-
-                <h2
-                  className={`text-4xl font-bold mt-3 ${
-                    totalPnL >= 0
-                      ? "text-green-400"
-                      : "text-red-400"
-                  }`}
-                >
-                  ₹{totalPnL.toFixed(2)}
-                </h2>
-
-              </div>
-
-              <div className="bg-green-500/20 p-4 rounded-2xl">
-                <TrendingUp size={32} />
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* WIN RATE */}
-          <div className="bg-[#07122b] border border-zinc-800 rounded-3xl p-6">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-
-                <p className="text-zinc-400">
-                  Win Rate
-                </p>
-
-                <h2 className="text-4xl font-bold mt-3 text-yellow-400">
-                  {winRate}%
-                </h2>
-
-              </div>
-
-              <div className="bg-yellow-500/20 p-4 rounded-2xl">
-                <Target size={32} />
-              </div>
+              </p>
 
             </div>
 
@@ -378,156 +85,295 @@ export default function DashboardPage() {
 
         </div>
 
-        {/* ANALYTICS CHART */}
-        <AnalyticsChart trades={trades} />
+        {/* MARKET TICKER */}
+
+        <MarketTicker />
+
+        {/* MARKET OVERVIEW CARDS */}
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+
+          {marketData.map((market) => (
+
+            <div
+              key={market.name}
+              className="bg-gradient-to-br from-white to-pink-50 border border-pink-100 rounded-2xl px-5 py-4 shadow-md hover:scale-[1.02] transition-all duration-300"
+            >
+
+              {/* MARKET NAME */}
+
+              <p className="text-zinc-500 text-xs font-medium">
+
+                {market.name}
+
+              </p>
+
+              {/* MARKET VALUE */}
+
+              <h2 className="text-3xl font-extrabold text-zinc-800 mt-2 leading-none">
+
+                {market.value}
+
+              </h2>
+
+              {/* MARKET CHANGE */}
+
+              <p
+                className={`mt-3 text-xl font-bold ${
+                  market.positive
+                    ? "text-green-500"
+                    : "text-red-500"
+                }`}
+              >
+
+                {market.change}
+
+              </p>
+
+            </div>
+          ))}
+
+        </div>
 
         {/* LIVE CHART */}
-        <LiveChart />
 
-        {/* MARKET NEWS */}
-        <MarketNews />
+        <div className="mb-6">
 
-        {/* AI ASSISTANT */}
-        <AIAssistant />
+          <TradingViewChart />
 
-        {/* ADD TRADE */}
-        <div className="mt-14 bg-[#050816] border border-zinc-900 rounded-3xl p-6 md:p-8">
+        </div>
 
-          {/* TITLE */}
-          <div className="flex items-center gap-4 mb-10">
+        {/* QUICK ANALYTICS */}
 
-            <div className="bg-gradient-to-br from-violet-500 to-fuchsia-500 p-3 rounded-2xl">
-              <Plus size={28} />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 
-            <h2 className="text-3xl md:text-4xl font-bold">
-              Add Trade
+          {/* PORTFOLIO */}
+
+          <div className="bg-gradient-to-br from-white to-pink-50 border border-pink-100 rounded-2xl p-5 shadow-md">
+
+            <p className="text-zinc-500 text-sm">
+
+              Total Portfolio Value
+
+            </p>
+
+            <h2 className="text-3xl font-bold text-green-500 mt-2">
+
+              ₹5,42,850
+
             </h2>
 
           </div>
 
-          {/* FORM */}
-          <div className="space-y-6">
+          {/* DAILY PNL */}
 
-            {/* STOCK */}
-            <input
-              type="text"
-              placeholder="Stock / Crypto Name"
-              value={stockName}
-              onChange={(e) =>
-                setStockName(e.target.value)
-              }
-              className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
-            />
+          <div className="bg-gradient-to-br from-white to-pink-50 border border-pink-100 rounded-2xl p-5 shadow-md">
 
-            {/* STRATEGY */}
-            <input
-              type="text"
-              placeholder="Strategy Name"
-              value={strategyName}
-              onChange={(e) =>
-                setStrategyName(e.target.value)
-              }
-              className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
-            />
+            <p className="text-zinc-500 text-sm">
 
-            {/* TYPE */}
-            <select
-              value={tradeType}
-              onChange={(e) =>
-                setTradeType(e.target.value)
-              }
-              className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
-            >
-              <option>BUY</option>
-              <option>SELL</option>
-            </select>
+              Today's Profit / Loss
 
-            {/* DATES */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            </p>
 
-              <input
-                type="date"
-                value={buyDate}
-                onChange={(e) =>
-                  setBuyDate(e.target.value)
-                }
-                className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
-              />
+            <h2 className="text-3xl font-bold text-pink-500 mt-2">
 
-              <input
-                type="date"
-                value={sellDate}
-                onChange={(e) =>
-                  setSellDate(e.target.value)
-                }
-                className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
-              />
+              +₹12,450
 
-            </div>
+            </h2>
 
-            {/* PRICE SECTION */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          </div>
 
-              <input
-                type="number"
-                placeholder="Quantity"
-                value={quantity}
-                onChange={(e) =>
-                  setQuantity(e.target.value)
-                }
-                className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
-              />
+          {/* WIN RATE */}
 
-              <input
-                type="number"
-                placeholder="Buy Price"
-                value={buyPrice}
-                onChange={(e) =>
-                  setBuyPrice(e.target.value)
-                }
-                className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
-              />
+          <div className="bg-gradient-to-br from-white to-pink-50 border border-pink-100 rounded-2xl p-5 shadow-md">
 
-              <input
-                type="number"
-                placeholder="Sell Price"
-                value={sellPrice}
-                onChange={(e) =>
-                  setSellPrice(e.target.value)
-                }
-                className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
-              />
+            <p className="text-zinc-500 text-sm">
 
-            </div>
+              Win Rate
 
-            {/* SCREENSHOT */}
-            <input
-              type="file"
-              onChange={(e) =>
-                setScreenshot(e.target.files?.[0])
-              }
-              className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5"
-            />
+            </p>
 
-            {/* NOTES */}
-            <textarea
-              rows={5}
-              placeholder="Trade Notes..."
-              value={notes}
-              onChange={(e) =>
-                setNotes(e.target.value)
-              }
-              className="w-full bg-[#07122b] border border-zinc-800 rounded-2xl p-5 text-lg outline-none"
-            />
+            <h2 className="text-3xl font-bold text-orange-500 mt-2">
 
-            {/* SAVE BUTTON */}
-            <button
-              onClick={saveTrade}
-              className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-2xl p-5 text-xl font-bold hover:opacity-90 transition"
-            >
-              Save Trade
+              68%
+
+            </h2>
+
+          </div>
+
+        </div>
+
+        {/* RECENT TRADES */}
+
+        <div className="bg-gradient-to-br from-white to-pink-50 border border-pink-100 rounded-2xl p-5 shadow-md">
+
+          <div className="flex items-center justify-between mb-5">
+
+            <h2 className="text-2xl font-bold text-zinc-800">
+
+              Recent Trades
+
+            </h2>
+
+            <button className="bg-pink-500 hover:bg-pink-600 text-white px-5 py-2 rounded-xl transition font-semibold">
+
+              View All
+
             </button>
+
+          </div>
+
+          {/* TABLE */}
+
+          <div className="overflow-x-auto">
+
+            <table className="w-full">
+
+              <thead>
+
+                <tr className="border-b border-pink-100 text-left">
+
+                  <th className="py-3 text-zinc-500 font-medium">
+
+                    Symbol
+
+                  </th>
+
+                  <th className="py-3 text-zinc-500 font-medium">
+
+                    Type
+
+                  </th>
+
+                  <th className="py-3 text-zinc-500 font-medium">
+
+                    Entry
+
+                  </th>
+
+                  <th className="py-3 text-zinc-500 font-medium">
+
+                    Exit
+
+                  </th>
+
+                  <th className="py-3 text-zinc-500 font-medium">
+
+                    P&L
+
+                  </th>
+
+                </tr>
+
+              </thead>
+
+              <tbody>
+
+                <tr className="border-b border-pink-100 hover:bg-pink-50 transition">
+
+                  <td className="py-4 text-zinc-800 font-medium">
+
+                    NIFTY
+
+                  </td>
+
+                  <td className="py-4 text-green-500 font-semibold">
+
+                    BUY
+
+                  </td>
+
+                  <td className="py-4 text-zinc-800">
+
+                    24800
+
+                  </td>
+
+                  <td className="py-4 text-zinc-800">
+
+                    24890
+
+                  </td>
+
+                  <td className="py-4 text-green-500 font-bold">
+
+                    +₹6,750
+
+                  </td>
+
+                </tr>
+
+                <tr className="border-b border-pink-100 hover:bg-pink-50 transition">
+
+                  <td className="py-4 text-zinc-800 font-medium">
+
+                    BANKNIFTY
+
+                  </td>
+
+                  <td className="py-4 text-red-500 font-semibold">
+
+                    SELL
+
+                  </td>
+
+                  <td className="py-4 text-zinc-800">
+
+                    53100
+
+                  </td>
+
+                  <td className="py-4 text-zinc-800">
+
+                    52980
+
+                  </td>
+
+                  <td className="py-4 text-green-500 font-bold">
+
+                    +₹4,200
+
+                  </td>
+
+                </tr>
+
+                <tr className="hover:bg-pink-50 transition">
+
+                  <td className="py-4 text-zinc-800 font-medium">
+
+                    RELIANCE
+
+                  </td>
+
+                  <td className="py-4 text-green-500 font-semibold">
+
+                    BUY
+
+                  </td>
+
+                  <td className="py-4 text-zinc-800">
+
+                    2950
+
+                  </td>
+
+                  <td className="py-4 text-zinc-800">
+
+                    2920
+
+                  </td>
+
+                  <td className="py-4 text-red-500 font-bold">
+
+                    -₹1,850
+
+                  </td>
+
+                </tr>
+
+              </tbody>
+
+            </table>
 
           </div>
 
