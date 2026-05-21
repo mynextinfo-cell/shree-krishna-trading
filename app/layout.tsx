@@ -1,31 +1,76 @@
-import type { Metadata } from "next";
+import type { Metadata }
+from "next";
 
 import "./globals.css";
 
-export const metadata: Metadata = {
+import {
+  Cinzel,
+  Poppins,
+}
+from "next/font/google";
 
-  title: "Shree Krishna Trading",
+const cinzel =
+  Cinzel({
+
+    subsets: ["latin"],
+
+    variable:
+      "--font-cinzel",
+  });
+
+const poppins =
+  Poppins({
+
+    subsets: ["latin"],
+
+    weight: [
+      "300",
+      "400",
+      "500",
+      "600",
+      "700",
+    ],
+
+    variable:
+      "--font-poppins",
+  });
+
+export const metadata:
+Metadata = {
+
+  title:
+    "Shree Krishna Trading",
 
   description:
-    "Professional Trading Dashboard",
-
-  manifest: "/manifest.json",
-
-  themeColor: "#7c3aed",
-
+    "Professional Trading Platform",
 };
 
 export default function RootLayout({
+
   children,
-}: {
-  children: React.ReactNode;
-}) {
+
+}: Readonly<{
+
+  children:
+    React.ReactNode;
+
+}>) {
 
   return (
 
     <html lang="en">
 
-      <body>
+      <body
+        className={`
+
+          ${cinzel.variable}
+
+          ${poppins.variable}
+
+          font-sans
+
+        `}
+      >
 
         {children}
 

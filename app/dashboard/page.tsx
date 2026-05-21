@@ -1,37 +1,282 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import Sidebar from "@/components/Sidebar";
-import TradingViewChart from "@/components/TradingViewChart";
-import MarketTicker from "@/components/MarketTicker";
+
+import YahooTicker from "@/components/live/YahooTicker";
+
+import { supabase } from "@/lib/supabase";
 
 export default function DashboardPage() {
 
-  const marketData = [
-    {
-      name: "NIFTY 50",
-      value: "24,850.35",
-      change: "+125.40",
-      positive: true,
-    },
-    {
-      name: "BANKNIFTY",
-      value: "53,120.80",
-      change: "-210.25",
-      positive: false,
-    },
-    {
-      name: "SENSEX",
-      value: "81,245.65",
-      change: "+310.75",
-      positive: true,
-    },
-    {
-      name: "NASDAQ",
-      value: "19,210.45",
-      change: "+95.15",
-      positive: true,
-    },
-  ];
+  // LIVE CLOCK
+
+  const [currentTime, setCurrentTime] =
+    useState("");
+
+  const [currentDate, setCurrentDate] =
+    useState("");
+
+  // TRADES
+
+  const [trades, setTrades] =
+    useState<any[]>([]);
+
+  // PROFILE
+
+  const [profile, setProfile] =
+    useState<any>(null);
+
+  // LOADING
+
+  const [loading, setLoading] =
+    useState(true);
+
+  // FETCH TRADES
+
+  const fetchTrades = async () => {
+
+    setLoading(true);
+
+    // CURRENT USER
+
+    const {
+
+      data: {
+        user,
+      },
+
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+
+      setLoading(false);
+
+      return;
+    }
+
+    // FETCH PROFILE
+
+    const {
+      data: profileData,
+    } = await supabase
+
+      .from("profiles")
+
+      .select("*")
+
+      .eq(
+        "id",
+        user.id
+      )
+
+      .single();
+
+    setProfile(
+      profileData
+    );
+
+    // BASE QUERY
+
+    let query =
+      supabase
+
+        .from("trades")
+
+        .select("*");
+
+    // NORMAL USER
+
+    if (
+      profileData?.role !==
+      "admin"
+    ) {
+
+      query =
+        query.eq(
+          "user_id",
+          user.id
+        );
+    }
+
+    // FETCH TRADES
+
+    const {
+      data,
+      error,
+    } = await query;
+
+    if (error) {
+
+      console.error(
+        error
+      );
+
+      setLoading(false);
+
+      return;
+    }
+
+    setTrades(
+      data || []
+    );
+
+    setLoading(false);
+  };
+
+  // FETCH
+
+  useEffect(() => {
+
+    fetchTrades();
+
+  }, []);
+
+  // LIVE CLOCK
+
+  useEffect(() => {
+
+    const updateClock = () => {
+
+      const now =
+        new Date();
+
+      setCurrentTime(
+
+        now.toLocaleTimeString(
+          "en-IN",
+          {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }
+        )
+      );
+
+      setCurrentDate(
+
+        now.toLocaleDateString(
+          "en-IN",
+          {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }
+        )
+      );
+    };
+
+    updateClock();
+
+    const interval =
+      setInterval(
+        updateClock,
+        1000
+      );
+
+    return () =>
+      clearInterval(
+        interval
+      );
+
+  }, []);
+
+  // STATS
+
+  const totalTrades =
+    trades.length;
+
+  const openTrades =
+    trades.filter(
+      (trade) =>
+        trade.status ===
+        "open"
+    ).length;
+
+  const closedTrades =
+    trades.filter(
+      (trade) =>
+        trade.status ===
+        "closed"
+    ).length;
+
+  const winningTrades =
+    trades.filter(
+      (trade) =>
+        Number(
+          trade.net_pnl
+        ) > 0
+    ).length;
+
+  const losingTrades =
+    trades.filter(
+      (trade) =>
+        Number(
+          trade.net_pnl
+        ) < 0
+    ).length;
+
+  // WIN RATE
+
+  const winRate =
+
+    closedTrades > 0
+
+      ? (
+          (
+            winningTrades /
+            closedTrades
+          ) * 100
+        ).toFixed(1)
+
+      : "0";
+
+  // TOTAL NET PNL
+
+  const totalNetPnl =
+    trades.reduce(
+
+      (sum, trade) =>
+
+        sum +
+
+        Number(
+          trade.net_pnl || 0
+        ),
+
+      0
+    );
+
+  // TOTAL INVESTMENT
+
+  const totalInvestment =
+    trades
+      .filter(
+        (trade) =>
+          trade.status ===
+          "open"
+      )
+
+      .reduce(
+
+        (sum, trade) =>
+
+          sum +
+
+          (
+            Number(
+              trade.entry_price
+            ) *
+
+            Number(
+              trade.quantity
+            )
+          ),
+
+        0
+      );
 
   return (
 
@@ -41,343 +286,356 @@ export default function DashboardPage() {
 
       <Sidebar />
 
-      {/* MAIN CONTENT */}
+      {/* MAIN */}
 
-      <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+      <main className="flex-1 p-6 overflow-y-auto">
+
+        {/* TICKER */}
+
+        <div className="mb-6">
+
+          <YahooTicker />
+
+        </div>
 
         {/* HEADER */}
 
-        <div className="bg-orange-500 rounded-3xl px-8 py-6 shadow-xl mb-6">
+        <div className="bg-gradient-to-r from-pink-500 to-rose-400 rounded-3xl p-8 shadow-xl mb-6">
 
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-start justify-between gap-6">
 
             {/* LEFT */}
 
             <div>
 
-              <h1 className="text-5xl font-extrabold text-white tracking-wide">
+              <h1 className="text-4xl font-bold text-white">
 
                 Shree Krishna Trading
 
               </h1>
 
-              <p className="text-white/90 mt-2 text-xl">
+              <p className="text-white/90 text-lg mt-3 font-semibold">
 
-                Trust Commitment Growth
+                Founder & CEO: Sanjay Mondal
 
               </p>
+
+              {/* ROLE */}
+
+              <div className="mt-4">
+
+                <span className={`px-4 py-2 rounded-full text-sm font-bold
+
+                  ${
+                    profile?.role ===
+                    "admin"
+
+                      ? "bg-red-100 text-red-600"
+
+                      : "bg-white text-pink-600"
+                  }
+                `}>
+
+                  Logged in as:
+
+                  {" "}
+
+                  {profile?.role || "user"}
+
+                </span>
+
+              </div>
 
             </div>
 
-            {/* RIGHT */}
+            {/* CLOCK */}
 
-            <div className="bg-orange-400/40 rounded-2xl px-6 py-4 backdrop-blur-md">
+            <div className="bg-white/20 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/20 shadow-lg">
 
-              <p className="text-white text-lg font-semibold">
+              <h2 className="text-lg font-bold text-black text-right">
 
-                Chairman: Sanjay Mondal
-
-              </p>
-
-            </div>
-
-          </div>
-
-        </div>
-
-        {/* MARKET TICKER */}
-
-        <MarketTicker />
-
-        {/* MARKET OVERVIEW CARDS */}
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-
-          {marketData.map((market) => (
-
-            <div
-              key={market.name}
-              className="bg-gradient-to-br from-white to-pink-50 border border-pink-100 rounded-2xl px-5 py-4 shadow-md hover:scale-[1.02] transition-all duration-300"
-            >
-
-              {/* MARKET NAME */}
-
-              <p className="text-zinc-500 text-xs font-medium">
-
-                {market.name}
-
-              </p>
-
-              {/* MARKET VALUE */}
-
-              <h2 className="text-3xl font-extrabold text-zinc-800 mt-2 leading-none">
-
-                {market.value}
+                {currentTime}
 
               </h2>
 
-              {/* MARKET CHANGE */}
+              <p className="text-xs text-black text-right mt-1">
 
-              <p
-                className={`mt-3 text-xl font-bold ${
-                  market.positive
-                    ? "text-green-500"
-                    : "text-red-500"
-                }`}
-              >
-
-                {market.change}
+                {currentDate}
 
               </p>
 
             </div>
-          ))}
-
-        </div>
-
-        {/* LIVE CHART */}
-
-        <div className="mb-6">
-
-          <TradingViewChart />
-
-        </div>
-
-        {/* QUICK ANALYTICS */}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-          {/* PORTFOLIO */}
-
-          <div className="bg-gradient-to-br from-white to-pink-50 border border-pink-100 rounded-2xl p-5 shadow-md">
-
-            <p className="text-zinc-500 text-sm">
-
-              Total Portfolio Value
-
-            </p>
-
-            <h2 className="text-3xl font-bold text-green-500 mt-2">
-
-              ₹5,42,850
-
-            </h2>
-
-          </div>
-
-          {/* DAILY PNL */}
-
-          <div className="bg-gradient-to-br from-white to-pink-50 border border-pink-100 rounded-2xl p-5 shadow-md">
-
-            <p className="text-zinc-500 text-sm">
-
-              Today's Profit / Loss
-
-            </p>
-
-            <h2 className="text-3xl font-bold text-pink-500 mt-2">
-
-              +₹12,450
-
-            </h2>
-
-          </div>
-
-          {/* WIN RATE */}
-
-          <div className="bg-gradient-to-br from-white to-pink-50 border border-pink-100 rounded-2xl p-5 shadow-md">
-
-            <p className="text-zinc-500 text-sm">
-
-              Win Rate
-
-            </p>
-
-            <h2 className="text-3xl font-bold text-orange-500 mt-2">
-
-              68%
-
-            </h2>
 
           </div>
 
         </div>
 
-        {/* RECENT TRADES */}
+        {/* LOADING */}
 
-        <div className="bg-gradient-to-br from-white to-pink-50 border border-pink-100 rounded-2xl p-5 shadow-md">
+        {loading && (
 
-          <div className="flex items-center justify-between mb-5">
+          <div className="bg-white rounded-3xl shadow-lg border border-pink-100 p-10 text-center text-zinc-500 mb-6">
 
-            <h2 className="text-2xl font-bold text-zinc-800">
-
-              Recent Trades
-
-            </h2>
-
-            <button className="bg-pink-500 hover:bg-pink-600 text-white px-5 py-2 rounded-xl transition font-semibold">
-
-              View All
-
-            </button>
+            Loading Dashboard...
 
           </div>
+        )}
 
-          {/* TABLE */}
+        {/* STATS */}
 
-          <div className="overflow-x-auto">
+        {!loading && (
 
-            <table className="w-full">
+          <>
 
-              <thead>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
-                <tr className="border-b border-pink-100 text-left">
+              {/* TOTAL TRADES */}
 
-                  <th className="py-3 text-zinc-500 font-medium">
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
 
-                    Symbol
+                <p className="text-zinc-500 text-sm">
 
-                  </th>
+                  Total Trades
 
-                  <th className="py-3 text-zinc-500 font-medium">
+                </p>
 
-                    Type
+                <h2 className="text-2xl font-bold text-zinc-800 mt-2">
 
-                  </th>
+                  {totalTrades}
 
-                  <th className="py-3 text-zinc-500 font-medium">
+                </h2>
 
-                    Entry
+              </div>
 
-                  </th>
+              {/* OPEN POSITIONS */}
 
-                  <th className="py-3 text-zinc-500 font-medium">
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
 
-                    Exit
+                <p className="text-zinc-500 text-sm">
 
-                  </th>
+                  Open Positions
 
-                  <th className="py-3 text-zinc-500 font-medium">
+                </p>
 
-                    P&L
+                <h2 className="text-2xl font-bold text-yellow-600 mt-2">
 
-                  </th>
+                  {openTrades}
 
-                </tr>
+                </h2>
 
-              </thead>
+              </div>
 
-              <tbody>
+              {/* CLOSED TRADES */}
 
-                <tr className="border-b border-pink-100 hover:bg-pink-50 transition">
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
 
-                  <td className="py-4 text-zinc-800 font-medium">
+                <p className="text-zinc-500 text-sm">
 
-                    NIFTY
+                  Closed Trades
 
-                  </td>
+                </p>
 
-                  <td className="py-4 text-green-500 font-semibold">
+                <h2 className="text-2xl font-bold text-blue-600 mt-2">
 
-                    BUY
+                  {closedTrades}
 
-                  </td>
+                </h2>
 
-                  <td className="py-4 text-zinc-800">
+              </div>
 
-                    24800
+              {/* WIN RATE */}
 
-                  </td>
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
 
-                  <td className="py-4 text-zinc-800">
+                <p className="text-zinc-500 text-sm">
 
-                    24890
+                  Win Rate
 
-                  </td>
+                </p>
 
-                  <td className="py-4 text-green-500 font-bold">
+                <h2 className="text-2xl font-bold text-green-600 mt-2">
 
-                    +₹6,750
+                  {winRate}%
 
-                  </td>
+                </h2>
 
-                </tr>
+              </div>
 
-                <tr className="border-b border-pink-100 hover:bg-pink-50 transition">
+              {/* TOTAL NET PNL */}
 
-                  <td className="py-4 text-zinc-800 font-medium">
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
 
-                    BANKNIFTY
+                <p className="text-zinc-500 text-sm">
 
-                  </td>
+                  Total Net P&L
 
-                  <td className="py-4 text-red-500 font-semibold">
+                </p>
 
-                    SELL
+                <h2 className={`text-2xl font-bold mt-2
 
-                  </td>
+                  ${
+                    totalNetPnl >= 0
 
-                  <td className="py-4 text-zinc-800">
+                      ? "text-green-600"
 
-                    53100
+                      : "text-red-500"
+                  }
+                `}>
 
-                  </td>
+                  ₹
+                  {totalNetPnl.toFixed(2)}
 
-                  <td className="py-4 text-zinc-800">
+                </h2>
 
-                    52980
+              </div>
 
-                  </td>
+              {/* TOTAL INVESTMENT */}
 
-                  <td className="py-4 text-green-500 font-bold">
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
 
-                    +₹4,200
+                <p className="text-zinc-500 text-sm">
 
-                  </td>
+                  Total Investment
 
-                </tr>
+                </p>
 
-                <tr className="hover:bg-pink-50 transition">
+                <h2 className="text-2xl font-bold text-zinc-800 mt-2">
 
-                  <td className="py-4 text-zinc-800 font-medium">
+                  ₹
+                  {totalInvestment.toFixed(2)}
 
-                    RELIANCE
+                </h2>
 
-                  </td>
+              </div>
 
-                  <td className="py-4 text-green-500 font-semibold">
+              {/* WINNING TRADES */}
 
-                    BUY
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
 
-                  </td>
+                <p className="text-zinc-500 text-sm">
 
-                  <td className="py-4 text-zinc-800">
+                  Winning Trades
 
-                    2950
+                </p>
 
-                  </td>
+                <h2 className="text-2xl font-bold text-green-600 mt-2">
 
-                  <td className="py-4 text-zinc-800">
+                  {winningTrades}
 
-                    2920
+                </h2>
 
-                  </td>
+              </div>
 
-                  <td className="py-4 text-red-500 font-bold">
+              {/* LOSING TRADES */}
 
-                    -₹1,850
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
 
-                  </td>
+                <p className="text-zinc-500 text-sm">
 
-                </tr>
+                  Losing Trades
 
-              </tbody>
+                </p>
 
-            </table>
+                <h2 className="text-2xl font-bold text-red-500 mt-2">
 
-          </div>
+                  {losingTrades}
 
-        </div>
+                </h2>
+
+              </div>
+
+            </div>
+
+            {/* MAIN PANEL */}
+
+            <div className="bg-white rounded-3xl shadow-lg border border-pink-100 p-8">
+
+              <h2 className="text-3xl font-bold text-zinc-800 mb-4">
+
+                Trading Overview
+
+              </h2>
+
+              <p className="text-zinc-600 text-lg leading-relaxed">
+
+                Welcome to your professional trading operating system.
+                Portfolio, journal, ledger and analytics are now
+                connected with multi-user secure Supabase backend.
+
+              </p>
+
+              <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+                <div className="bg-pink-50 rounded-2xl p-5 border border-pink-100">
+
+                  <h3 className="font-bold text-zinc-800">
+
+                    Portfolio Sync
+
+                  </h3>
+
+                  <p className="text-sm text-zinc-500 mt-2">
+
+                    Auto synced with open trades.
+
+                  </p>
+
+                </div>
+
+                <div className="bg-pink-50 rounded-2xl p-5 border border-pink-100">
+
+                  <h3 className="font-bold text-zinc-800">
+
+                    Ledger Sync
+
+                  </h3>
+
+                  <p className="text-sm text-zinc-500 mt-2">
+
+                    Closed trades auto update.
+
+                  </p>
+
+                </div>
+
+                <div className="bg-pink-50 rounded-2xl p-5 border border-pink-100">
+
+                  <h3 className="font-bold text-zinc-800">
+
+                    Analytics
+
+                  </h3>
+
+                  <p className="text-sm text-zinc-500 mt-2">
+
+                    Real-time trading performance.
+
+                  </p>
+
+                </div>
+
+                <div className="bg-pink-50 rounded-2xl p-5 border border-pink-100">
+
+                  <h3 className="font-bold text-zinc-800">
+
+                    Database
+
+                  </h3>
+
+                  <p className="text-sm text-zinc-500 mt-2">
+
+                    Secure multi-user Supabase system connected.
+
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </>
+        )}
 
       </main>
 

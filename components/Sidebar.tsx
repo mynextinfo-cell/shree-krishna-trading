@@ -1,133 +1,154 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
-import {
-  LayoutDashboard,
-  Calculator,
-  BarChart3,
-  BookOpen,
-  BriefcaseBusiness,
-  Wallet,
-  Settings,
-  LogOut,
-} from "lucide-react";
+import Image from "next/image";
+
+import { usePathname }
+from "next/navigation";
+
+import LogoutButton
+from "./LogoutButton";
 
 export default function Sidebar() {
 
   const pathname =
     usePathname();
 
-  const menuItems = [
+  // NAVIGATION ITEMS
+
+  const navItems = [
+
     {
-      title: "Dashboard",
+      name: "Dashboard",
       href: "/dashboard",
-      icon: LayoutDashboard,
     },
+
     {
-      title: "Calculator",
+      name: "Calculator",
       href: "/calculator",
-      icon: Calculator,
     },
+
     {
-      title: "Analytics",
-      href: "/analytics",
-      icon: BarChart3,
-    },
-    {
-      title: "Journal",
+      name: "Journal",
       href: "/journal",
-      icon: BookOpen,
     },
+
     {
-      title: "Portfolio",
+      name: "Portfolio",
       href: "/portfolio",
-      icon: BriefcaseBusiness,
     },
+
     {
-      title: "Ledger",
+      name: "Ledger",
       href: "/ledger",
-      icon: Wallet,
     },
+
+    // ✅ NEW ANALYTICS TAB
+
     {
-      title: "Settings",
+      name: "Analytics",
+      href: "/analytics",
+    },
+
+    {
+      name: "Charts",
+      href: "/chart",
+    },
+
+    {
+      name: "News",
+      href: "/news",
+    },
+
+    {
+      name: "Settings",
       href: "/settings",
-      icon: Settings,
     },
   ];
 
   return (
 
-    <aside className="w-72 bg-white border-r border-zinc-200 min-h-screen flex flex-col justify-between">
+    <aside
+      className="
+        w-72
+        min-h-screen
+        bg-white
+        border-r
+        border-pink-100
+        shadow-2xl
+        p-6
+        flex
+        flex-col
+      "
+    >
 
-      {/* TOP SECTION */}
+      {/* LOGO */}
 
-      <div>
+      <div className="mb-10">
 
-        {/* LOGO */}
+        <div className="flex justify-center">
 
-        <div className="flex justify-center items-center py-8 border-b border-zinc-200">
-
-          <img
+          <Image
             src="/logo.png"
-            alt="Logo"
-            className="w-40 rounded-xl"
+            alt="Company Logo"
+            width={180}
+            height={180}
+            className="object-contain"
+            priority
           />
-
-        </div>
-
-        {/* MENU */}
-
-        <div className="p-4 space-y-3">
-
-          {menuItems.map((item) => {
-
-            const Icon =
-              item.icon;
-
-            const active =
-              pathname === item.href;
-
-            return (
-
-              <Link
-                key={item.title}
-                href={item.href}
-                className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-200 ${
-                  active
-                    ? "bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-lg"
-                    : "text-zinc-700 hover:bg-zinc-100 hover:text-black"
-                }`}
-              >
-
-                <Icon size={24} />
-
-                <span className="text-lg font-medium">
-
-                  {item.title}
-
-                </span>
-
-              </Link>
-            );
-          })}
 
         </div>
 
       </div>
 
+      {/* NAVIGATION */}
+
+      <nav className="flex flex-col gap-3">
+
+        {navItems.map((item) => {
+
+          const active =
+            pathname === item.href;
+
+          return (
+
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`
+
+                px-5
+                py-4
+                rounded-2xl
+                font-semibold
+                transition
+                shadow-sm
+
+                ${active
+
+                  ? "bg-pink-500 text-white shadow-lg"
+
+                  : "bg-pink-50 text-zinc-700 hover:bg-pink-100"
+
+                }
+
+              `}
+            >
+
+              {item.name}
+
+            </Link>
+          );
+        })}
+
+      </nav>
+
       {/* LOGOUT */}
 
-      <div className="p-4 border-t border-zinc-200">
+      <div className="mt-auto pt-8">
 
-        <button className="w-full flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-semibold transition">
-
-          <LogOut size={22} />
-
-          Logout
-
-        </button>
+        <LogoutButton />
 
       </div>
 

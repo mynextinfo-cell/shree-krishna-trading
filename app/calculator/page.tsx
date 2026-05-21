@@ -1,149 +1,158 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Sidebar from "@/components/Sidebar";
 
 import SimpleCalculator from "@/components/calculators/SimpleCalculator";
-import PositionSizeCalculator from "@/components/calculators/PositionSizeCalculator";
-import RiskRewardCalculator from "@/components/calculators/RiskRewardCalculator";
+
 import BrokerageCalculator from "@/components/calculators/BrokerageCalculator";
-import CompoundingCalculator from "@/components/calculators/CompoundingCalculator";
+
 import SIPCalculator from "@/components/calculators/SIPCalculator";
+
+import RiskRewardCalculator from "@/components/calculators/RiskRewardCalculator";
+
+import PositionSizeCalculator from "@/components/calculators/PositionSizeCalculator";
+
 import FuturesCalculator from "@/components/calculators/FuturesCalculator";
+
+import CompoundingCalculator from "@/components/calculators/CompoundingCalculator";
 
 export default function CalculatorPage() {
 
-  const [activeCalculator, setActiveCalculator] =
-    useState("simple");
+  // LIVE CLOCK
+
+  const [currentTime, setCurrentTime] =
+    useState("");
+
+  const [currentDate, setCurrentDate] =
+    useState("");
+
+  useEffect(() => {
+
+    const updateClock = () => {
+
+      const now =
+        new Date();
+
+      setCurrentTime(
+
+        now.toLocaleTimeString(
+          "en-IN",
+          {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }
+        )
+      );
+
+      setCurrentDate(
+
+        now.toLocaleDateString(
+          "en-IN",
+          {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }
+        )
+      );
+    };
+
+    updateClock();
+
+    const interval =
+      setInterval(
+        updateClock,
+        1000
+      );
+
+    return () =>
+      clearInterval(
+        interval
+      );
+
+  }, []);
 
   return (
 
-    <div className="flex min-h-screen bg-zinc-900">
+    <div className="flex min-h-screen bg-[#fff1f7]">
+
+      {/* SIDEBAR */}
 
       <Sidebar />
 
-      <main className="flex-1 px-4 py-4 md:px-6 overflow-y-auto">
+      {/* MAIN CONTENT */}
+
+      <main className="flex-1 p-6 overflow-y-auto">
 
         {/* HEADER */}
 
-        <div className="bg-orange-500 rounded-2xl px-8 py-5 shadow-xl mb-6">
+        <div className="bg-gradient-to-r from-orange-500 to-amber-400 rounded-3xl p-8 shadow-xl mb-8">
 
-          <h1 className="text-4xl font-extrabold text-white">
+          <div className="flex items-start justify-between gap-6">
 
-            Trading Calculator Suite
+            {/* LEFT */}
 
-          </h1>
+            <div>
 
-          <p className="text-white/90 mt-2">
+              <h1 className="text-4xl font-bold text-white">
 
-            Professional trading & investment calculators
+                Trading Calculators
 
-          </p>
+              </h1>
 
-        </div>
+              <p className="text-white/90 text-lg mt-3">
 
-        {/* DROPDOWN */}
+                Professional tools for trading and investing.
 
-        <div className="mb-6">
+              </p>
 
-          <select
-            value={activeCalculator}
-            onChange={(e) =>
-              setActiveCalculator(
-                e.target.value
-              )
-            }
-            className="bg-zinc-800 border border-zinc-700 text-white rounded-xl px-5 py-3 w-full md:w-96 outline-none focus:border-pink-500"
-          >
+            </div>
 
-            <option value="simple">
-              Simple Calculator
-            </option>
+            {/* RIGHT CLOCK */}
 
-            <option value="position">
-              Position Size Calculator
-            </option>
+            <div className="bg-white/20 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/20 shadow-lg">
 
-            <option value="riskreward">
-              Risk Reward Calculator
-            </option>
+              <h2 className="text-lg font-bold text-black text-right">
 
-            <option value="brokerage">
-              Brokerage Calculator
-            </option>
+                {currentTime}
 
-            <option value="compounding">
-              Compounding Calculator
-            </option>
+              </h2>
 
-            <option value="sip">
-              SIP Calculator
-            </option>
+              <p className="text-xs text-black text-right mt-1">
 
-            <option value="futures">
-              Futures Lot Calculator
-            </option>
+                {currentDate}
 
-          </select>
+              </p>
+
+            </div>
+
+          </div>
 
         </div>
 
-        {/* SIMPLE */}
+        {/* CALCULATORS */}
 
-        {activeCalculator === "simple" && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
           <SimpleCalculator />
 
-        )}
-
-        {/* POSITION */}
-
-        {activeCalculator === "position" && (
-
-          <PositionSizeCalculator />
-
-        )}
-
-        {/* RISK REWARD */}
-
-        {activeCalculator === "riskreward" && (
-
-          <RiskRewardCalculator />
-
-        )}
-
-        {/* BROKERAGE */}
-
-        {activeCalculator === "brokerage" && (
-
           <BrokerageCalculator />
-
-        )}
-
-        {/* COMPOUNDING */}
-
-        {activeCalculator === "compounding" && (
-
-          <CompoundingCalculator />
-
-        )}
-
-        {/* SIP */}
-
-        {activeCalculator === "sip" && (
 
           <SIPCalculator />
 
-        )}
+          <RiskRewardCalculator />
 
-        {/* FUTURES */}
-
-        {activeCalculator === "futures" && (
+          <PositionSizeCalculator />
 
           <FuturesCalculator />
 
-        )}
+          <CompoundingCalculator />
+
+        </div>
 
       </main>
 

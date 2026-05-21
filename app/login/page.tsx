@@ -1,189 +1,250 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
+import { useState } from "react";
 
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation";
 
-import { supabase } from '@/lib/supabase'
+import Link from "next/link";
+
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
 
-  const router = useRouter()
+  const router =
+    useRouter();
+
+  // STATES
 
   const [email, setEmail] =
-    useState('')
+    useState("");
 
   const [password, setPassword] =
-    useState('')
+    useState("");
 
   const [loading, setLoading] =
-    useState(false)
+    useState(false);
 
-  const [isSignup, setIsSignup] =
-    useState(false)
+  // LOGIN FUNCTION
 
-  const handleAuth = async () => {
+  const handleLogin =
+    async (
+      e: React.FormEvent
+    ) => {
 
-    setLoading(true)
+      e.preventDefault();
 
-    try {
+      setLoading(true);
 
-      if (isSignup) {
+      // ADMIN SHORT LOGIN
 
-        const { error } =
-          await supabase.auth.signUp({
+      let loginEmail =
+        email;
 
-            email,
-            password,
+      if (
+        email.toLowerCase() ===
+        "admin"
+      ) {
 
-          })
-
-        if (error) {
-
-          alert(error.message)
-
-        } else {
-
-          alert(
-            'Signup successful!'
-          )
-
-        }
-
-      } else {
-
-        const { error } =
-          await supabase.auth.signInWithPassword({
-
-            email,
-            password,
-
-          })
-
-        if (error) {
-
-          alert(error.message)
-
-        } else {
-
-          router.push('/dashboard')
-
-        }
-
+        loginEmail =
+          "mynextinfo@gmail.com";
       }
 
-    } catch (error) {
+      // SUPABASE LOGIN
 
-      alert('Something went wrong')
+      const { error } =
+        await supabase.auth.signInWithPassword({
 
-    }
+          email:
+            loginEmail,
 
-    setLoading(false)
+          password:
+            password,
+        });
 
-  }
+      // ERROR
+
+      if (error) {
+
+        alert(
+          error.message
+        );
+
+        setLoading(false);
+
+        return;
+      }
+
+      // SUCCESS
+
+      alert(
+        "Login Successful 🚀"
+      );
+
+      router.push(
+        "/dashboard"
+      );
+
+      setLoading(false);
+    };
 
   return (
 
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center p-5">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-rose-50 to-white p-6">
 
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-10">
+      {/* CARD */}
 
-        {/* TITLE */}
-        <h1 className="text-5xl font-black text-center text-pink-700">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-pink-100 p-8">
 
-          SK Trading
+        {/* HEADER */}
 
-        </h1>
+        <div className="text-center mb-8">
 
-        <p className="text-center text-pink-500 mt-3">
+          <h1 className="text-4xl font-bold text-pink-600">
 
-          Welcome Back Trader 🚀
+            Welcome Back
 
-        </p>
+          </h1>
 
-        {/* EMAIL */}
-        <div className="mt-8">
+          <p className="text-zinc-500 mt-3">
 
-          <label className="font-semibold text-gray-700">
+            Login to Shree Krishna Trading
 
-            Email
-
-          </label>
-
-          <input
-            type="email"
-            value={email}
-            onChange={(e) =>
-              setEmail(e.target.value)
-            }
-            placeholder="you@example.com"
-            className="w-full mt-2 px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
-          />
+          </p>
 
         </div>
 
-        {/* PASSWORD */}
-        <div className="mt-5">
+        {/* FORM */}
 
-          <label className="font-semibold text-gray-700">
-
-            Password
-
-          </label>
-
-          <input
-            type="password"
-            value={password}
-            onChange={(e) =>
-              setPassword(e.target.value)
-            }
-            placeholder="••••••••"
-            className="w-full mt-2 px-5 py-4 rounded-2xl border border-pink-100 bg-pink-50 outline-none"
-          />
-
-        </div>
-
-        {/* BUTTON */}
-        <button
-          onClick={handleAuth}
-          disabled={loading}
-          className="w-full mt-8 bg-gradient-to-r from-pink-500 to-rose-500 text-white py-4 rounded-2xl font-black text-lg shadow-lg"
+        <form
+          onSubmit={
+            handleLogin
+          }
+          className="space-y-5"
         >
 
-          {loading
-            ? 'Please wait...'
-            : isSignup
-            ? 'Create Account'
-            : 'Login'}
+          {/* EMAIL */}
 
-        </button>
+          <div>
 
-        {/* TOGGLE */}
-        <p className="text-center text-gray-600 mt-6">
+            <label className="block text-sm font-semibold text-zinc-700 mb-2">
 
-          {isSignup
-            ? 'Already have account?'
-            : "Don't have account?"}
+              Email / Admin ID
+
+            </label>
+
+            <input
+              type="text"
+              placeholder="Enter email or admin"
+              value={email}
+              onChange={(e) =>
+                setEmail(
+                  e.target.value
+                )
+              }
+              required
+              className="
+                w-full
+                px-5
+                py-4
+                rounded-2xl
+                bg-pink-50
+                border
+                border-pink-100
+                outline-none
+                focus:border-pink-400
+                text-zinc-700
+              "
+            />
+
+          </div>
+
+          {/* PASSWORD */}
+
+          <div>
+
+            <label className="block text-sm font-semibold text-zinc-700 mb-2">
+
+              Password
+
+            </label>
+
+            <input
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) =>
+                setPassword(
+                  e.target.value
+                )
+              }
+              required
+              className="
+                w-full
+                px-5
+                py-4
+                rounded-2xl
+                bg-pink-50
+                border
+                border-pink-100
+                outline-none
+                focus:border-pink-400
+                text-zinc-700
+              "
+            />
+
+          </div>
+
+          {/* BUTTON */}
 
           <button
-            onClick={() =>
-              setIsSignup(!isSignup)
-            }
-            className="text-pink-600 font-bold ml-2"
+            type="submit"
+            disabled={loading}
+            className="
+              w-full
+              bg-pink-500
+              hover:bg-pink-600
+              disabled:bg-pink-300
+              text-white
+              font-bold
+              py-4
+              rounded-2xl
+              transition-all
+              duration-300
+              shadow-lg
+            "
           >
 
-            {isSignup
-              ? 'Login'
-              : 'Sign Up'}
+            {loading
+              ? "Logging in..."
+              : "Login"}
 
           </button>
 
-        </p>
+        </form>
+
+        {/* FOOTER */}
+
+        <div className="mt-8 text-center">
+
+          <p className="text-zinc-500">
+
+            Don&apos;t have an account?
+
+          </p>
+
+          <Link
+            href="/signup"
+            className="text-pink-600 font-bold hover:text-pink-700 mt-2 inline-block"
+          >
+
+            Create Account
+
+          </Link>
+
+        </div>
 
       </div>
 
     </div>
-
-  )
-
+  );
 }

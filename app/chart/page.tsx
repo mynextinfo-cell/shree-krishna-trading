@@ -1,246 +1,140 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import nseStocks from '../data/nseStocks'
+import Sidebar from "@/components/Sidebar";
 
 export default function ChartPage() {
 
-  const [currentTime, setCurrentTime] = useState('')
-  const [stockInput, setStockInput] = useState('')
-  const [symbol, setSymbol] = useState('NSE:RELIANCE')
-
-  // Clock
-  useEffect(() => {
-
-    const updateClock = () => {
-
-      const now = new Date()
-
-      setCurrentTime(now.toLocaleString())
-    }
-
-    updateClock()
-
-    const interval = setInterval(updateClock, 1000)
-
-    return () => clearInterval(interval)
-
-  }, [])
-
-  // Dashboard Data
-  const indexes = [
+  const charts = [
 
     {
-      name: 'NIFTY50',
-      symbol: 'NSE:NIFTY',
-      price: '₹22,450',
-      change: '+1.24%',
-      trend: 'up'
+      title: "NIFTY 50",
+      value: "24,850",
+      change: "+0.45%",
+      color: "text-green-600",
     },
 
     {
-      name: 'NIFTY100',
-      symbol: 'NSECNX:NIFTY',
-      price: '₹23,120',
-      change: '+0.92%',
-      trend: 'up'
+      title: "BANKNIFTY",
+      value: "55,210",
+      change: "-0.32%",
+      color: "text-red-500",
     },
 
     {
-      name: 'S&P500',
-      symbol: 'SP:SPX',
-      price: '$5,210',
-      change: '-0.42%',
-      trend: 'down'
+      title: "SENSEX",
+      value: "81,720",
+      change: "+0.40%",
+      color: "text-green-600",
     },
 
     {
-      name: 'DJIA',
-      symbol: 'DJ:DJI',
-      price: '$39,500',
-      change: '+0.71%',
-      trend: 'up'
+      title: "NASDAQ",
+      value: "18,650",
+      change: "+1.12%",
+      color: "text-green-600",
     },
-
-    {
-      name: 'Nasdaq',
-      symbol: 'NASDAQ:IXIC',
-      price: '$16,300',
-      change: '+1.18%',
-      trend: 'up'
-    },
-
-    {
-      name: 'Russell 2000',
-      symbol: 'INDEX:RUT',
-      price: '$2,050',
-      change: '-0.36%',
-      trend: 'down'
-    },
-
-    {
-      name: 'NYSE',
-      symbol: 'NYSE:NYA',
-      price: '$18,100',
-      change: '+0.48%',
-      trend: 'up'
-    }
-
-  ]
-
-  // Fast Search Suggestions
-  const filteredStocks = nseStocks.filter((stock) =>
-    stock.toLowerCase().includes(
-      stockInput.toLowerCase()
-    )
-  )
+  ];
 
   return (
 
-    <main className="min-h-screen bg-pink-100 text-black p-6">
+    <div className="flex min-h-screen bg-[#f5f7ff]">
 
-      {/* Header */}
-      <div className="flex justify-between items-start mb-10 flex-wrap gap-5">
+      {/* SIDEBAR */}
 
-        <div>
+      <Sidebar />
 
-          <h1 className="text-5xl font-bold mb-2 text-pink-700">
-            Shree Krishna Trading
+      {/* MAIN CONTENT */}
+
+      <main className="flex-1 p-6 overflow-y-auto">
+
+        {/* HEADER */}
+
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl p-8 shadow-xl mb-6">
+
+          <h1 className="text-4xl font-bold text-white">
+
+            Market Charts
+
           </h1>
 
-          <p className="text-gray-700 text-lg">
-            Professional Trading Workspace
+          <p className="text-white/90 text-lg mt-3">
+
+            Track market indices and stock performance.
+
           </p>
 
         </div>
 
-        {/* Time */}
-        <div className="bg-white px-6 py-4 rounded-3xl shadow-lg border border-pink-200">
+        {/* SUMMARY CARDS */}
 
-          <p className="font-bold text-lg">
-            📅 {currentTime}
-          </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+          {charts.map((chart) => (
+
+            <div
+              key={chart.title}
+              className="bg-white rounded-2xl p-4 shadow-md border border-blue-100"
+            >
+
+              <p className="text-zinc-500 text-sm">
+
+                {chart.title}
+
+              </p>
+
+              <h2 className="text-2xl font-bold text-zinc-800 mt-2">
+
+                {chart.value}
+
+              </h2>
+
+              <p className={`font-semibold mt-1 ${chart.color}`}>
+
+                {chart.change}
+
+              </p>
+
+            </div>
+          ))}
 
         </div>
 
-      </div>
+        {/* CHART SECTION */}
 
-      {/* Dashboard */}
-      <div className="grid grid-cols-3 md:grid-cols-5 xl:grid-cols-7 gap-3 mb-8">
+        <div className="bg-white rounded-3xl shadow-lg border border-blue-100 p-6">
 
-        {indexes.map((index) => (
+          <h2 className="text-2xl font-bold text-zinc-800 mb-6">
 
-          <button
-            key={index.symbol}
-            onClick={() => setSymbol(index.symbol)}
-            className={`
+            Live Market Overview
 
-              rounded-lg
-              p-3
-              shadow-lg
-              transition-all
-              duration-300
-              aspect-[2.8/1.6]
-              text-left
+          </h2>
 
-              ${
-                index.trend === 'up'
-                  ? 'bg-green-500 hover:bg-green-600 text-white'
-                  : 'bg-red-500 hover:bg-red-600 text-white'
-              }
+          {/* MOCK CHART */}
 
-            `}
-          >
+          <div className="h-[400px] bg-gradient-to-br from-blue-50 to-indigo-100 rounded-3xl flex items-center justify-center">
 
-            <h2 className="text-sm font-bold mb-1">
-              {index.name}
-            </h2>
+            <div className="text-center">
 
-            <p className="text-lg font-bold">
-              {index.price}
-            </p>
+              <h3 className="text-3xl font-bold text-indigo-600">
 
-            <p className="text-sm">
-              {index.change}
-            </p>
+                Trading Charts Coming Soon 🚀
 
-          </button>
+              </h3>
 
-        ))}
+              <p className="text-zinc-600 mt-4 text-lg">
 
-      </div>
+                TradingView style live chart integration will appear here.
 
-      {/* Search Section */}
-      <div className="bg-white rounded-3xl p-6 shadow-lg mb-8 relative">
+              </p>
 
-        <h2 className="text-xl font-bold mb-4">
-          🔍 Search NSE Stock
-        </h2>
-
-        <input
-          type="text"
-          placeholder="Type stock name..."
-          value={stockInput}
-          onChange={(e) => setStockInput(e.target.value)}
-          className="w-full border border-pink-300 rounded-2xl p-4"
-        />
-
-        {/* Dropdown Suggestions */}
-        {stockInput && (
-
-          <div className="absolute left-6 right-6 top-28 bg-white border border-pink-200 rounded-2xl shadow-xl max-h-[300px] overflow-y-auto z-50">
-
-            {filteredStocks.slice(0, 20).map((stock) => (
-
-              <button
-                key={stock}
-                onClick={() => {
-
-                  setSymbol(`NSE:${stock}`)
-                  setStockInput(stock)
-
-                }}
-                className="w-full text-left px-5 py-3 hover:bg-pink-100 border-b"
-              >
-
-                {stock}
-
-              </button>
-
-            ))}
+            </div>
 
           </div>
 
-        )}
-
-      </div>
-
-      {/* Current Selection */}
-      <div className="bg-white rounded-2xl p-5 shadow-lg mb-8 flex flex-wrap items-center justify-between gap-4 border border-pink-200">
-
-        <div>
-
-          <p className="text-sm text-gray-500 mb-1">
-            Current Selection
-          </p>
-
-          <h2 className="text-2xl font-bold text-pink-700">
-            {symbol}
-          </h2>
-
         </div>
 
-        {/* Open Chart */}
-        <a
-          href={`https://www.tradingview.com/chart/?symbol=${symbol}`}
-          target="_blank"
-          className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-2xl font-bold shadow-lg"
-        >
-          📊 Open Chart
-        </a>
+      </main>
 
-      </div>
-
-    </main>
-  )
+    </div>
+  );
 }

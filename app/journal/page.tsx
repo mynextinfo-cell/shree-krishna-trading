@@ -4,68 +4,281 @@ import { useEffect, useState } from "react";
 
 import Sidebar from "@/components/Sidebar";
 
-import { Trade } from "@/components/journal/types";
-
-import AnalyticsCard from "@/components/journal/AnalyticsCard";
-
-import MonthlyPerformance from "@/components/journal/MonthlyPerformance";
-
-import EquityCurve from "@/components/journal/EquityCurve";
-
-import TradeHistory from "@/components/journal/TradeHistory";
-
 import TradeForm from "@/components/journal/TradeForm";
 
-import ExportCSV from "@/components/journal/ExportCSV";
+import CloseTradeModal from "@/components/journal/CloseTradeModal";
 
-import ExportPDF from "@/components/journal/ExportPDF";
+import EditTradeModal from "@/components/journal/EditTradeModal";
+
+import ViewTradeModal from "@/components/journal/ViewTradeModal";
 
 import { supabase } from "@/lib/supabase";
 
+import {
+  exportTradesToPDF,
+  exportTradesToCSV,
+} from "@/lib/exportTrades";
+
 export default function JournalPage() {
 
-  // TODAY DATE
+  // CLOCK
 
-  const today =
-    new Date()
-      .toISOString()
-      .split("T")[0];
-
-  // FORM STATES
-
-  const [date, setDate] =
-    useState(today);
-
-  const [symbol, setSymbol] =
+  const [currentTime, setCurrentTime] =
     useState("");
 
-  const [tradeType, setTradeType] =
-    useState("BUY");
-
-  const [entryPrice, setEntryPrice] =
+  const [currentDate, setCurrentDate] =
     useState("");
 
-  const [exitPrice, setExitPrice] =
+  // PROFILE
+
+  const [profile, setProfile] =
+    useState<any>(null);
+
+  // TRADES
+
+  const [openTrades, setOpenTrades] =
+    useState<any[]>([]);
+
+  const [closedTrades, setClosedTrades] =
+    useState<any[]>([]);
+
+  // LOADING
+
+  const [loading, setLoading] =
+    useState(true);
+
+  // MODALS
+
+  const [selectedTrade, setSelectedTrade] =
+    useState<any>(null);
+
+  const [editTrade, setEditTrade] =
+    useState<any>(null);
+
+  const [viewTrade, setViewTrade] =
+    useState<any>(null);
+
+  // SEARCH + FILTER
+
+  const [search, setSearch] =
     useState("");
 
-  const [quantity, setQuantity] =
-    useState("");
+  const [sideFilter, setSideFilter] =
+    useState("ALL");
 
-  const [brokerage, setBrokerage] =
-    useState("");
+  const [statusFilter, setStatusFilter] =
+    useState("ALL");
 
-  const [notes, setNotes] =
-    useState("");
+  // PAGINATION
 
-  // TRADE STATES
+  const [currentPage, setCurrentPage] =
+    useState(1);
 
-  const [trades, setTrades] =
-    useState<Trade[]>([]);
+  const tradesPerPage = 10;
 
-  const [editIndex, setEditIndex] =
-    useState<number | null>(null);
+  // FETCH DATA
 
-  // FETCH TRADES
+  const fetchTrades = async () => {
+
+    setLoading(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+
+      setLoading(false);
+
+      return;
+    }
+
+    // PROFILE
+
+    const {
+      data: profileData,
+    } = await supabase
+
+      .from("profiles")
+
+      .select("*")
+
+      .eq("id", user.id)
+
+      .single();
+
+    setProfile(profileData);
+
+    // OPEN QUERY
+
+    let openQuery =
+
+      supabase
+
+        .from("trades")
+
+        .select("*")
+
+        .eq("status", "open");
+
+    // CLOSED QUERY
+
+    let closedQuery =
+
+      supabase
+
+        .from("trades")
+
+        .select("*")
+
+        .eq("status", "closed");
+
+    // USER FILTER
+
+    if (
+      profileData?.role !==
+      "admin"
+    ) {
+
+      openQuery =
+        openQuery.eq(
+          "user_id",
+          user.id
+        );
+
+      closedQuery =
+        closedQuery.eq(
+          "user_id",
+          user.id
+        );
+    }
+
+    // FETCH OPEN
+
+    const {
+      data: openData,
+    } = await openQuery.order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    );
+
+    // FETCH CLOSED
+
+    const {
+      data: closedData,
+    } = await closedQuery.order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    );
+
+    setOpenTrades(
+      openData || []
+    );
+
+    setClosedTrades(
+      closedData || []
+    );
+
+    setLoading(false);
+  };
+
+  // DELETE TRADE
+
+  const handleDeleteTrade =
+    async (
+      id: string
+    ) => {
+
+      const confirmDelete =
+        confirm(
+          "Delete this trade permanently?"
+        );
+
+      if (!confirmDelete)
+        return;
+
+      const { error } =
+        await supabase
+
+          .from("trades")
+
+          .delete()
+
+          .eq("id", id);
+
+      if (error) {
+
+        console.error(error);
+
+        alert(
+          "Failed to delete trade ❌"
+        );
+
+        return;
+      }
+
+      alert(
+        "Trade deleted successfully ✅"
+      );
+
+      fetchTrades();
+    };
+
+  // CLOCK
+
+  useEffect(() => {
+
+    const updateClock = () => {
+
+      const now =
+        new Date();
+
+      setCurrentTime(
+
+        now.toLocaleTimeString(
+          "en-IN",
+          {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }
+        )
+      );
+
+      setCurrentDate(
+
+        now.toLocaleDateString(
+          "en-IN",
+          {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }
+        )
+      );
+    };
+
+    updateClock();
+
+    const interval =
+      setInterval(
+        updateClock,
+        1000
+      );
+
+    return () =>
+      clearInterval(
+        interval
+      );
+
+  }, []);
+
+  // INITIAL FETCH
 
   useEffect(() => {
 
@@ -73,510 +286,149 @@ export default function JournalPage() {
 
   }, []);
 
-  const fetchTrades =
-    async () => {
+  // TOTAL PNL
 
-      const {
-        data,
-        error,
-      } = await supabase
-        .from("trades")
-        .select("*")
-        .order(
-          "created_at",
-          {
-            ascending: false,
-          }
-        );
+  const totalNetPnl =
+    closedTrades.reduce(
 
-      if (error) {
+      (sum, trade) =>
 
-        alert(
-          error.message
-        );
+        sum +
 
-        return;
-      }
+        Number(
+          trade.net_pnl || 0
+        ),
 
-      const formattedTrades =
-        data.map(
-          (trade) => ({
-
-            id: trade.id,
-
-            created_at:
-              trade.created_at,
-
-            date:
-              trade.date,
-
-            symbol:
-              trade.symbol,
-
-            tradeType:
-              trade.trade_type,
-
-            entryPrice:
-              Number(
-                trade.entry_price
-              ),
-
-            exitPrice:
-              Number(
-                trade.exit_price
-              ),
-
-            quantity:
-              Number(
-                trade.quantity
-              ),
-
-            brokerage:
-              Number(
-                trade.brokerage
-              ),
-
-            notes:
-              trade.notes,
-
-            grossPnL:
-              Number(
-                trade.gross_pnl
-              ),
-
-            netPnL:
-              Number(
-                trade.net_pnl
-              ),
-          }))
-;
-
-      setTrades(
-        formattedTrades
-      );
-    };
-
-  // CALCULATE GROSS PNL
-
-  const calculateGrossPnL = () => {
-
-    const entry =
-      Number(entryPrice);
-
-    const exit =
-      Number(exitPrice);
-
-    const qty =
-      Number(quantity);
-
-    if (tradeType === "BUY") {
-
-      return (
-        (exit - entry) * qty
-      );
-    }
-
-    return (
-      (entry - exit) * qty
-    );
-  };
-
-  const grossPnL =
-    calculateGrossPnL();
-
-  // NET PNL
-
-  const netPnL =
-    grossPnL -
-    Number(
-      brokerage || 0
-    );
-
-  // RESET FORM
-
-  const resetForm = () => {
-
-    setDate(today);
-
-    setSymbol("");
-
-    setTradeType("BUY");
-
-    setEntryPrice("");
-
-    setExitPrice("");
-
-    setQuantity("");
-
-    setBrokerage("");
-
-    setNotes("");
-
-    setEditIndex(null);
-  };
-
-  // SAVE / UPDATE TRADE
-
-  const saveTrade =
-    async () => {
-
-      if (
-        !symbol ||
-        !entryPrice ||
-        !exitPrice ||
-        !quantity
-      ) {
-
-        alert(
-          "Please fill all required fields."
-        );
-
-        return;
-      }
-
-      // UPDATE TRADE
-
-      if (
-        editIndex !== null
-      ) {
-
-        const trade =
-          trades[
-            editIndex
-          ];
-
-        const {
-          error,
-        } = await supabase
-          .from("trades")
-          .update({
-
-            date: date,
-
-            symbol:
-              symbol,
-
-            trade_type:
-              tradeType,
-
-            entry_price:
-              Number(
-                entryPrice
-              ),
-
-            exit_price:
-              Number(
-                exitPrice
-              ),
-
-            quantity:
-              Number(
-                quantity
-              ),
-
-            brokerage:
-              Number(
-                brokerage || 0
-              ),
-
-            notes: notes,
-
-            gross_pnl:
-              grossPnL,
-
-            net_pnl:
-              netPnL,
-          })
-          .eq(
-            "id",
-            trade.id
-          );
-
-        if (error) {
-
-          alert(
-            error.message
-          );
-
-          return;
-        }
-
-        await fetchTrades();
-
-        resetForm();
-
-        return;
-      }
-
-      // INSERT TRADE
-
-      const {
-        error,
-      } = await supabase
-        .from("trades")
-        .insert([{
-
-          date: date,
-
-          symbol:
-            symbol,
-
-          trade_type:
-            tradeType,
-
-          entry_price:
-            Number(
-              entryPrice
-            ),
-
-          exit_price:
-            Number(
-              exitPrice
-            ),
-
-          quantity:
-            Number(
-              quantity
-            ),
-
-          brokerage:
-            Number(
-              brokerage || 0
-            ),
-
-          notes: notes,
-
-          gross_pnl:
-            grossPnL,
-
-          net_pnl:
-            netPnL,
-        }]);
-
-      if (error) {
-
-        alert(
-          error.message
-        );
-
-        return;
-      }
-
-      await fetchTrades();
-
-      resetForm();
-    };
-
-  // DELETE TRADE
-
-  const deleteTrade =
-    async (
-      indexToDelete: number
-    ) => {
-
-      const trade =
-        trades[
-          indexToDelete
-        ];
-
-      const {
-        error,
-      } = await supabase
-        .from("trades")
-        .delete()
-        .eq(
-          "id",
-          trade.id
-        );
-
-      if (error) {
-
-        alert(
-          error.message
-        );
-
-        return;
-      }
-
-      await fetchTrades();
-    };
-
-  // EDIT TRADE
-
-  const editTrade = (
-    trade: Trade,
-    index: number
-  ) => {
-
-    setDate(trade.date);
-
-    setSymbol(
-      trade.symbol
-    );
-
-    setTradeType(
-      trade.tradeType
-    );
-
-    setEntryPrice(
-      trade.entryPrice.toString()
-    );
-
-    setExitPrice(
-      trade.exitPrice.toString()
-    );
-
-    setQuantity(
-      trade.quantity.toString()
-    );
-
-    setBrokerage(
-      trade.brokerage.toString()
-    );
-
-    setNotes(
-      trade.notes
-    );
-
-    setEditIndex(index);
-
-    window.scrollTo({
-
-      top: 0,
-
-      behavior:
-        "smooth",
-    });
-  };
-
-  // ANALYTICS
-
-  const totalTrades =
-    trades.length;
-
-  const winningTrades =
-    trades.filter(
-      (trade) =>
-        trade.netPnL > 0
-    ).length;
-
-  const losingTrades =
-    trades.filter(
-      (trade) =>
-        trade.netPnL < 0
-    ).length;
-
-  const totalNetPnL =
-    trades.reduce(
-      (acc, trade) =>
-        acc +
-        trade.netPnL,
       0
     );
 
-  const winRate =
-    totalTrades > 0
-      ? (
-          (winningTrades /
-            totalTrades) *
-          100
-        ).toFixed(1)
-      : "0";
+  // FILTER OPEN
 
-  const bestTrade =
-    trades.length > 0
-      ? Math.max(
-          ...trades.map(
-            (trade) =>
-              trade.netPnL
-          )
-        )
-      : 0;
+  const filteredOpenTrades =
+    openTrades.filter(
+      (trade) => {
 
-  const worstTrade =
-    trades.length > 0
-      ? Math.min(
-          ...trades.map(
-            (trade) =>
-              trade.netPnL
-          )
-        )
-      : 0;
+        const matchesSearch =
 
-  // EQUITY CURVE
+          trade.stock_name
 
-  let cumulativePnL = 0;
+            ?.toLowerCase()
 
-  const equityCurveData =
-    trades
-      .slice()
-      .reverse()
-      .map(
-        (
-          trade,
-          index
-        ) => {
+            .includes(
+              search.toLowerCase()
+            );
 
-          cumulativePnL +=
-            trade.netPnL;
+        const matchesSide =
 
-          return {
+          sideFilter ===
+          "ALL"
 
-            trade:
-              index + 1,
+            ? true
 
-            equity:
-              cumulativePnL,
-          };
-        }
-      );
+            : trade.side ===
+              sideFilter;
 
-  // MONTHLY PERFORMANCE
+        const matchesStatus =
 
-  const monthlyMap:
-    Record<
-      string,
-      number
-    > = {};
+          statusFilter ===
+          "ALL"
 
-  trades.forEach(
-    (trade) => {
+            ? true
 
-      const month =
-        new Date(
-          trade.date
-        ).toLocaleString(
-          "default",
-          {
+            : statusFilter ===
+              "OPEN";
 
-            month:
-              "long",
-
-            year:
-              "numeric",
-          }
+        return (
+          matchesSearch &&
+          matchesSide &&
+          matchesStatus
         );
+      }
+    );
 
-      monthlyMap[
-        month
-      ] =
-        (
-          monthlyMap[
-            month
-          ] || 0
-        ) +
-        trade.netPnL;
-    }
-  );
+  // FILTER CLOSED
 
-  const monthlyPerformance =
-    Object.entries(
-      monthlyMap
+  const filteredClosedTrades =
+    closedTrades.filter(
+      (trade) => {
+
+        const matchesSearch =
+
+          trade.stock_name
+
+            ?.toLowerCase()
+
+            .includes(
+              search.toLowerCase()
+            );
+
+        const matchesSide =
+
+          sideFilter ===
+          "ALL"
+
+            ? true
+
+            : trade.side ===
+              sideFilter;
+
+        const matchesStatus =
+
+          statusFilter ===
+          "ALL"
+
+            ? true
+
+            : statusFilter ===
+              "CLOSED";
+
+        return (
+          matchesSearch &&
+          matchesSide &&
+          matchesStatus
+        );
+      }
+    );
+
+  // PAGINATION
+
+  const indexOfLastTrade =
+    currentPage *
+    tradesPerPage;
+
+  const indexOfFirstTrade =
+    indexOfLastTrade -
+    tradesPerPage;
+
+  const currentOpenTrades =
+    filteredOpenTrades.slice(
+      indexOfFirstTrade,
+      indexOfLastTrade
+    );
+
+  const currentClosedTrades =
+    filteredClosedTrades.slice(
+      indexOfFirstTrade,
+      indexOfLastTrade
+    );
+
+  const totalPages =
+    Math.ceil(
+
+      Math.max(
+
+        filteredOpenTrades.length,
+
+        filteredClosedTrades.length
+
+      ) /
+
+      tradesPerPage
     );
 
   return (
 
-    <div className="flex min-h-screen bg-[#fff1f7]">
+    <div className="flex min-h-screen bg-[#fff4f8]">
 
       {/* SIDEBAR */}
 
@@ -584,167 +436,763 @@ export default function JournalPage() {
 
       {/* MAIN */}
 
-      <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+      <main className="flex-1 p-6 overflow-y-auto">
 
         {/* HEADER */}
 
-        <div className="bg-pink-500 rounded-3xl px-8 py-6 shadow-xl mb-6">
+        <div className="bg-gradient-to-r from-pink-500 to-rose-400 rounded-3xl p-8 shadow-xl mb-6">
 
-          <h1 className="text-5xl font-extrabold text-white">
+          <div className="flex items-start justify-between gap-6">
 
-            Trading Journal
+            {/* LEFT */}
 
-          </h1>
+            <div>
 
-          <p className="text-white/90 mt-2 text-xl">
+              <h1 className="text-4xl font-bold text-white">
 
-            Professional Trade Tracking System
+                Trading Journal
 
-          </p>
+              </h1>
 
-        </div>
+              <p className="text-white/90 text-lg mt-3">
 
-        {/* ANALYTICS */}
+                Professional AI powered visual trading journal.
 
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+              </p>
 
-          <AnalyticsCard
-            title="Total Trades"
-            value={
-              totalTrades
-            }
-            color="text-zinc-800"
-          />
+              <div className="mt-4">
 
-          <AnalyticsCard
-            title="Winning"
-            value={
-              winningTrades
-            }
-            color="text-green-500"
-          />
+                <span className={`px-4 py-2 rounded-full text-sm font-bold
 
-          <AnalyticsCard
-            title="Losing"
-            value={
-              losingTrades
-            }
-            color="text-red-500"
-          />
+                  ${
+                    profile?.role ===
+                    "admin"
 
-          <AnalyticsCard
-            title="Win Rate"
-            value={`${winRate}%`}
-            color="text-blue-500"
-          />
+                      ? "bg-red-100 text-red-600"
 
-          <AnalyticsCard
-            title="Best Trade"
-            value={`₹${bestTrade.toFixed(0)}`}
-            color="text-green-500"
-          />
+                      : "bg-white text-pink-600"
+                  }
+                `}>
 
-          <AnalyticsCard
-            title="Worst Trade"
-            value={`₹${worstTrade.toFixed(0)}`}
-            color="text-red-500"
-          />
+                  Logged in as:
 
-        </div>
+                  {" "}
 
-        {/* MONTHLY PERFORMANCE */}
+                  {profile?.role || "user"}
 
-        <MonthlyPerformance
-          monthlyPerformance={
-            monthlyPerformance
-          }
-        />
+                </span>
 
-        {/* EQUITY CURVE */}
+              </div>
 
-        <EquityCurve
-          equityCurveData={
-            equityCurveData
-          }
-        />
+            </div>
 
-        {/* TRADE FORM */}
+            {/* CLOCK */}
 
-        <TradeForm
-          date={date}
-          setDate={setDate}
-          symbol={symbol}
-          setSymbol={setSymbol}
-          tradeType={tradeType}
-          setTradeType={setTradeType}
-          entryPrice={entryPrice}
-          setEntryPrice={setEntryPrice}
-          exitPrice={exitPrice}
-          setExitPrice={setExitPrice}
-          quantity={quantity}
-          setQuantity={setQuantity}
-          brokerage={brokerage}
-          setBrokerage={setBrokerage}
-          notes={notes}
-          setNotes={setNotes}
-          grossPnL={grossPnL}
-          netPnL={netPnL}
-          editIndex={
-            editIndex
-          }
-          onSave={
-            saveTrade
-          }
-          onCancelEdit={
-            resetForm
-          }
-        />
+            <div className="bg-white/20 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/20 shadow-lg">
 
-        {/* EXPORT BUTTONS */}
+              <h2 className="text-lg font-bold text-black text-right">
 
-        <div className="flex flex-wrap justify-end gap-4 mb-6">
+                {currentTime}
 
-          <ExportCSV
-            trades={trades}
-          />
+              </h2>
 
-          <ExportPDF
-            trades={trades}
-            totalTrades={
-              totalTrades
-            }
-            winningTrades={
-              winningTrades
-            }
-            losingTrades={
-              losingTrades
-            }
-            totalNetPnL={
-              totalNetPnL
-            }
-            winRate={
-              winRate
-            }
-          />
+              <p className="text-xs text-black text-right mt-1">
+
+                {currentDate}
+
+              </p>
+
+            </div>
+
+          </div>
 
         </div>
 
-        {/* TRADE HISTORY */}
+        {/* LOADING */}
 
-        <TradeHistory
-          trades={trades}
-          totalNetPnL={
-            totalNetPnL
-          }
-          onEdit={
-            editTrade
-          }
-          onDelete={
-            deleteTrade
-          }
-        />
+        {loading && (
+
+          <div className="bg-white rounded-3xl shadow-lg border border-pink-100 p-10 text-center text-zinc-500 mb-6">
+
+            Loading Journal...
+
+          </div>
+        )}
+
+        {/* CONTENT */}
+
+        {!loading && (
+
+          <>
+
+            {/* SUMMARY */}
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
+
+                <p className="text-zinc-500 text-sm">
+
+                  Open Positions
+
+                </p>
+
+                <h2 className="text-2xl font-bold text-zinc-800 mt-2">
+
+                  {openTrades.length}
+
+                </h2>
+
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
+
+                <p className="text-zinc-500 text-sm">
+
+                  Closed Trades
+
+                </p>
+
+                <h2 className="text-2xl font-bold text-zinc-800 mt-2">
+
+                  {closedTrades.length}
+
+                </h2>
+
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
+
+                <p className="text-zinc-500 text-sm">
+
+                  Total Net P&L
+
+                </p>
+
+                <h2 className={`text-2xl font-bold mt-2
+
+                  ${
+                    totalNetPnl >= 0
+
+                      ? "text-green-600"
+
+                      : "text-red-500"
+                  }
+                `}>
+
+                  ₹
+                  {totalNetPnl.toFixed(2)}
+
+                </h2>
+
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 shadow-md border border-pink-100">
+
+                <p className="text-zinc-500 text-sm">
+
+                  Total Trades
+
+                </p>
+
+                <h2 className="text-2xl font-bold text-blue-600 mt-2">
+
+                  {openTrades.length +
+                    closedTrades.length}
+
+                </h2>
+
+              </div>
+
+            </div>
+
+            {/* FILTERS */}
+
+            <div className="bg-white rounded-3xl shadow-lg border border-pink-100 p-5 mb-6">
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                <input
+
+                  type="text"
+
+                  placeholder="Search Stock..."
+
+                  value={search}
+
+                  onChange={(e) =>
+                    setSearch(
+                      e.target.value
+                    )
+                  }
+
+                  className="border border-pink-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-pink-400"
+                />
+
+                <select
+
+                  value={sideFilter}
+
+                  onChange={(e) =>
+                    setSideFilter(
+                      e.target.value
+                    )
+                  }
+
+                  className="border border-pink-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-pink-400"
+                >
+
+                  <option value="ALL">
+
+                    All Sides
+
+                  </option>
+
+                  <option value="BUY">
+
+                    BUY
+
+                  </option>
+
+                  <option value="SELL">
+
+                    SELL
+
+                  </option>
+
+                </select>
+
+                <select
+
+                  value={statusFilter}
+
+                  onChange={(e) =>
+                    setStatusFilter(
+                      e.target.value
+                    )
+                  }
+
+                  className="border border-pink-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-pink-400"
+                >
+
+                  <option value="ALL">
+
+                    All Status
+
+                  </option>
+
+                  <option value="OPEN">
+
+                    OPEN
+
+                  </option>
+
+                  <option value="CLOSED">
+
+                    CLOSED
+
+                  </option>
+
+                </select>
+
+              </div>
+
+            </div>
+
+            {/* EXPORT */}
+
+            <div className="flex flex-wrap gap-4 mb-6">
+
+              <button
+
+                onClick={() =>
+                  exportTradesToPDF(
+                    [...openTrades, ...closedTrades],
+                    "Journal Report"
+                  )
+                }
+
+                className="bg-red-500 hover:bg-red-600 text-white font-bold px-6 py-3 rounded-2xl shadow-lg"
+              >
+
+                Export PDF
+
+              </button>
+
+              <button
+
+                onClick={() =>
+                  exportTradesToCSV(
+                    [...openTrades, ...closedTrades],
+                    "journal-report"
+                  )
+                }
+
+                className="bg-green-500 hover:bg-green-600 text-white font-bold px-6 py-3 rounded-2xl shadow-lg"
+              >
+
+                Export Excel
+
+              </button>
+
+            </div>
+
+            {/* TRADE FORM */}
+
+            <div className="mb-6">
+
+              <TradeForm />
+
+            </div>
+
+            {/* OPEN POSITIONS */}
+
+            <div className="bg-white rounded-3xl shadow-lg border border-pink-100 overflow-hidden mb-6">
+
+              <div className="p-6 border-b border-pink-100">
+
+                <h2 className="text-2xl font-bold text-zinc-800">
+
+                  Open Positions
+
+                </h2>
+
+              </div>
+
+              <div className="overflow-x-auto">
+
+                <table className="w-full">
+
+                  <thead className="bg-pink-50">
+
+                    <tr>
+
+                      <th className="text-left px-6 py-4">
+                        S.No
+                      </th>
+
+                      <th className="text-left px-6 py-4">
+                        Stock
+                      </th>
+
+                      <th className="text-left px-6 py-4">
+                        Side
+                      </th>
+
+                      <th className="text-left px-6 py-4">
+                        Qty
+                      </th>
+
+                      <th className="text-left px-6 py-4">
+                        Entry
+                      </th>
+
+                      <th className="text-left px-6 py-4">
+                        Status
+                      </th>
+
+                      <th className="text-left px-6 py-4">
+                        Actions
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {currentOpenTrades.map(
+                      (
+                        trade,
+                        index
+                      ) => (
+
+                        <tr
+                          key={trade.id}
+                          className="border-b border-pink-50"
+                        >
+
+                          <td className="px-6 py-5 font-semibold text-zinc-500">
+
+                            {indexOfFirstTrade + index + 1}
+
+                          </td>
+
+                          <td className="px-6 py-5 font-bold">
+
+                            {trade.stock_name}
+
+                          </td>
+
+                          <td className={`px-6 py-5 font-semibold
+
+                            ${
+                              trade.side === "BUY"
+
+                                ? "text-green-600"
+
+                                : "text-red-500"
+                            }
+                          `}>
+
+                            {trade.side}
+
+                          </td>
+
+                          <td className="px-6 py-5">
+
+                            {trade.quantity}
+
+                          </td>
+
+                          <td className="px-6 py-5">
+
+                            ₹
+                            {trade.entry_price}
+
+                          </td>
+
+                          <td className="px-6 py-5">
+
+                            <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold">
+
+                              OPEN
+
+                            </span>
+
+                          </td>
+
+                          <td className="px-6 py-5">
+
+                            <div className="flex flex-wrap gap-2">
+
+                              <button
+
+                                onClick={() =>
+                                  setViewTrade(
+                                    trade
+                                  )
+                                }
+
+                                className="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded-xl font-semibold"
+                              >
+
+                                View
+
+                              </button>
+
+                              <button
+
+                                onClick={() =>
+                                  setSelectedTrade(
+                                    trade
+                                  )
+                                }
+
+                                className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-xl font-semibold"
+                              >
+
+                                Close
+
+                              </button>
+
+                              <button
+
+                                onClick={() =>
+                                  setEditTrade(
+                                    trade
+                                  )
+                                }
+
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold"
+                              >
+
+                                Edit
+
+                              </button>
+
+                              <button
+
+                                onClick={() =>
+                                  handleDeleteTrade(
+                                    trade.id
+                                  )
+                                }
+
+                                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-semibold"
+                              >
+
+                                Delete
+
+                              </button>
+
+                            </div>
+
+                          </td>
+
+                        </tr>
+                      )
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            </div>
+
+            {/* PAGINATION */}
+
+            <div className="flex items-center justify-center gap-3 mb-6">
+
+              <button
+
+                onClick={() =>
+                  setCurrentPage(
+                    (prev) =>
+                      Math.max(
+                        prev - 1,
+                        1
+                      )
+                  )
+                }
+
+                className="bg-pink-500 hover:bg-pink-600 text-white px-5 py-2 rounded-xl font-semibold"
+              >
+
+                Previous
+
+              </button>
+
+              <div className="bg-white border border-pink-200 px-5 py-2 rounded-xl font-bold text-pink-600 shadow-sm">
+
+                Page {currentPage}
+                {" / "}
+                {totalPages || 1}
+
+              </div>
+
+              <button
+
+                onClick={() =>
+                  setCurrentPage(
+                    (prev) =>
+                      Math.min(
+                        prev + 1,
+                        totalPages
+                      )
+                  )
+                }
+
+                className="bg-pink-500 hover:bg-pink-600 text-white px-5 py-2 rounded-xl font-semibold"
+              >
+
+                Next
+
+              </button>
+
+            </div>
+
+            {/* CLOSED TRADES */}
+
+            <div className="bg-white rounded-3xl shadow-lg border border-pink-100 overflow-hidden">
+
+              <div className="p-6 border-b border-pink-100">
+
+                <h2 className="text-2xl font-bold text-zinc-800">
+
+                  Closed Trades
+
+                </h2>
+
+              </div>
+
+              <div className="overflow-x-auto">
+
+                <table className="w-full">
+
+                  <thead className="bg-pink-50">
+
+                    <tr>
+
+                      <th className="text-left px-6 py-4">
+                        S.No
+                      </th>
+
+                      <th className="text-left px-6 py-4">
+                        Stock
+                      </th>
+
+                      <th className="text-left px-6 py-4">
+                        Entry
+                      </th>
+
+                      <th className="text-left px-6 py-4">
+                        Exit
+                      </th>
+
+                      <th className="text-left px-6 py-4">
+                        Net P&L
+                      </th>
+
+                      <th className="text-left px-6 py-4">
+                        View
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {currentClosedTrades.map(
+                      (
+                        trade,
+                        index
+                      ) => (
+
+                        <tr
+                          key={trade.id}
+                          className="border-b border-pink-50"
+                        >
+
+                          <td className="px-6 py-5 font-semibold text-zinc-500">
+
+                            {indexOfFirstTrade + index + 1}
+
+                          </td>
+
+                          <td className="px-6 py-5 font-bold">
+
+                            {trade.stock_name}
+
+                          </td>
+
+                          <td className="px-6 py-5">
+
+                            ₹
+                            {trade.entry_price}
+
+                          </td>
+
+                          <td className="px-6 py-5">
+
+                            ₹
+                            {trade.exit_price}
+
+                          </td>
+
+                          <td className={`px-6 py-5 font-bold
+
+                            ${
+                              trade.net_pnl >= 0
+
+                                ? "text-green-600"
+
+                                : "text-red-500"
+                            }
+                          `}>
+
+                            ₹
+                            {trade.net_pnl}
+
+                          </td>
+
+                          <td className="px-6 py-5">
+
+                            <button
+
+                              onClick={() =>
+                                setViewTrade(
+                                  trade
+                                )
+                              }
+
+                              className="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded-xl font-semibold"
+                            >
+
+                              View
+
+                            </button>
+
+                          </td>
+
+                        </tr>
+                      )
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            </div>
+
+          </>
+        )}
 
       </main>
+
+      {/* CLOSE MODAL */}
+
+      {selectedTrade && (
+
+        <CloseTradeModal
+
+          trade={selectedTrade}
+
+          onClose={() =>
+            setSelectedTrade(
+              null
+            )
+          }
+
+          onSuccess={
+            fetchTrades
+          }
+
+        />
+      )}
+
+      {/* EDIT MODAL */}
+
+      {editTrade && (
+
+        <EditTradeModal
+
+          trade={editTrade}
+
+          onClose={() =>
+            setEditTrade(
+              null
+            )
+          }
+
+          onSuccess={
+            fetchTrades
+          }
+
+        />
+      )}
+
+      {/* VIEW MODAL */}
+
+      {viewTrade && (
+
+        <ViewTradeModal
+
+          trade={viewTrade}
+
+          onClose={() =>
+            setViewTrade(
+              null
+            )
+          }
+
+        />
+      )}
 
     </div>
   );

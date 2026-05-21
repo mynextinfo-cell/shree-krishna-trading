@@ -1,250 +1,144 @@
-'use client'
+"use client";
 
-import {
-  useEffect,
-  useState,
-} from 'react'
-
-import {
-  Newspaper,
-  ExternalLink,
-} from 'lucide-react'
-
-type Article = {
-  title: string
-  description: string
-  url: string
-  urlToImage: string
-  source: {
-    name: string
-  }
-  publishedAt: string
-}
+import Sidebar from "@/components/Sidebar";
 
 export default function NewsPage() {
 
-  const [articles, setArticles] =
-    useState<Article[]>([])
+  const news = [
 
-  const [loading, setLoading] =
-    useState(true)
+    {
+      title: "NIFTY hits fresh all-time high amid strong buying",
+      source: "Economic Times",
+      time: "10 mins ago",
+    },
 
-  useEffect(() => {
+    {
+      title: "US markets rally after strong tech earnings",
+      source: "Bloomberg",
+      time: "25 mins ago",
+    },
 
-    const fetchNews =
-      async () => {
+    {
+      title: "Reliance announces new green energy investment",
+      source: "Moneycontrol",
+      time: "1 hour ago",
+    },
 
-        try {
+    {
+      title: "Bitcoin crosses $75,000 as crypto market surges",
+      source: "CNBC",
+      time: "2 hours ago",
+    },
 
-          const response =
-            await fetch(
-              '/api/news'
-            )
-
-          const result =
-            await response.json()
-
-          if (
-            result.success &&
-            result.articles
-          ) {
-
-            setArticles(
-              result.articles
-            )
-
-          } else {
-
-            setArticles([])
-
-          }
-
-        } catch (error) {
-
-          console.log(error)
-
-          setArticles([])
-
-        }
-
-        setLoading(false)
-
-      }
-
-    fetchNews()
-
-  }, [])
+    {
+      title: "FIIs continue aggressive buying in Indian equities",
+      source: "Business Standard",
+      time: "3 hours ago",
+    },
+  ];
 
   return (
 
-    <div className="min-h-screen bg-[#fff7fa] p-8">
+    <div className="flex min-h-screen bg-[#f9f5ff]">
 
-      {/* HEADER */}
-      <div className="flex items-center gap-5 mb-10">
+      {/* SIDEBAR */}
 
-        <div className="bg-white p-5 rounded-3xl shadow-md border border-pink-100">
+      <Sidebar />
 
-          <Newspaper
-            className="text-pink-600"
-            size={42}
-          />
+      {/* MAIN CONTENT */}
 
-        </div>
+      <main className="flex-1 p-6 overflow-y-auto">
 
-        <div>
+        {/* HEADER */}
 
-          <h1 className="text-6xl font-black text-pink-700">
+        <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-3xl p-8 shadow-xl mb-6">
+
+          <h1 className="text-4xl font-bold text-white">
 
             Market News
 
           </h1>
 
-          <p className="text-pink-500 text-2xl mt-2">
+          <p className="text-white/90 text-lg mt-3">
 
-            Live Financial Headlines
+            Latest updates from stock market, economy and global finance.
 
           </p>
 
         </div>
 
-      </div>
+        {/* TOP NEWS CARD */}
 
-      {/* LOADING */}
-      {loading ? (
+        <div className="bg-white rounded-3xl shadow-lg border border-purple-100 p-8 mb-6">
 
-        <div className="bg-white rounded-3xl p-10 shadow-md border border-pink-100 text-center text-2xl">
+          <p className="text-purple-500 font-semibold mb-3">
 
-          Loading latest market news...
+            TOP STORY
+
+          </p>
+
+          <h2 className="text-3xl font-bold text-zinc-800 leading-snug">
+
+            Indian stock market sees record inflows as investors remain bullish on banking and technology sectors.
+
+          </h2>
+
+          <p className="text-zinc-500 mt-4 text-lg">
+
+            Analysts expect strong momentum to continue in upcoming sessions with positive global cues.
+
+          </p>
 
         </div>
 
-      ) : (
+        {/* NEWS LIST */}
 
-        <div className="grid grid-cols-2 gap-8">
+        <div className="space-y-4">
 
-          {articles.length > 0 ? (
+          {news.map((item, index) => (
 
-            articles.map(
-              (
-                article,
-                index
-              ) => (
+            <div
+              key={index}
+              className="bg-white rounded-2xl shadow-md border border-purple-100 p-6 hover:shadow-lg transition"
+            >
 
-                <div
-                  key={index}
-                  className="bg-white rounded-3xl overflow-hidden shadow-md border border-pink-100"
-                >
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 
-                  {/* IMAGE */}
-                  {article.urlToImage ? (
+                <div>
 
-                    <img
-                      src={
-                        article.urlToImage
-                      }
-                      alt="news"
-                      className="w-full h-[260px] object-cover"
-                    />
+                  <h2 className="text-xl font-bold text-zinc-800">
 
-                  ) : (
+                    {item.title}
 
-                    <div className="w-full h-[260px] bg-pink-100 flex items-center justify-center">
+                  </h2>
 
-                      <Newspaper
-                        className="text-pink-500"
-                        size={80}
-                      />
+                  <p className="text-zinc-500 mt-2">
 
-                    </div>
+                    {item.source}
 
-                  )}
-
-                  {/* CONTENT */}
-                  <div className="p-8">
-
-                    <div className="flex items-center justify-between">
-
-                      <p className="text-pink-600 font-bold text-lg">
-
-                        {
-                          article.source
-                            ?.name
-                        }
-
-                      </p>
-
-                      <p className="text-gray-500 text-sm">
-
-                        {new Date(
-                          article.publishedAt
-                        ).toLocaleDateString()}
-
-                      </p>
-
-                    </div>
-
-                    <h2 className="text-3xl font-black text-gray-800 mt-5 leading-snug">
-
-                      {article.title}
-
-                    </h2>
-
-                    <p className="text-gray-600 text-lg mt-5 leading-relaxed">
-
-                      {
-                        article.description
-                      }
-
-                    </p>
-
-                    {/* BUTTON */}
-                    <a
-                      href={article.url}
-                      target="_blank"
-                      className="mt-8 inline-flex items-center gap-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-4 rounded-2xl font-bold text-lg shadow-lg"
-                    >
-
-                      Read Full News
-
-                      <ExternalLink
-                        size={20}
-                      />
-
-                    </a>
-
-                  </div>
+                  </p>
 
                 </div>
 
-              )
-            )
+                <div>
 
-          ) : (
+                  <span className="bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
 
-            <div className="col-span-2 bg-white rounded-3xl p-10 shadow-md border border-pink-100 text-center">
+                    {item.time}
 
-              <h2 className="text-3xl font-black text-gray-700">
+                  </span>
 
-                No News Available
+                </div>
 
-              </h2>
-
-              <p className="text-gray-500 mt-4 text-lg">
-
-                Check your News API key or internet connection.
-
-              </p>
+              </div>
 
             </div>
-
-          )}
+          ))}
 
         </div>
 
-      )}
+      </main>
 
     </div>
-
-  )
-
+  );
 }

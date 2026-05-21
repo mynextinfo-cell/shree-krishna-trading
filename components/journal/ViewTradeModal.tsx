@@ -41,7 +41,7 @@ export default function ViewTradeModal({
     );
   };
 
-  // INVESTMENT
+  // TOTAL INVESTMENT
 
   const investment =
 
@@ -53,19 +53,224 @@ export default function ViewTradeModal({
       trade.quantity || 0
     );
 
+  // GROSS PNL
+
+  const grossPnl =
+
+    trade.exit_price
+
+      ? (
+
+          (
+            Number(
+              trade.exit_price
+            ) -
+
+            Number(
+              trade.entry_price
+            )
+          ) *
+
+          Number(
+            trade.quantity
+          )
+
+        ).toFixed(2)
+
+      : "0";
+
+  // AI REVIEW ENGINE
+
+  const getAIReview =
+    () => {
+
+      const note =
+        (
+          trade.note || ""
+        ).toLowerCase();
+
+      const pnl =
+        Number(
+          trade.net_pnl || 0
+        );
+
+      const reviews:
+        string[] = [];
+
+      // LOSS
+
+      if (pnl < 0) {
+
+        reviews.push(
+          "⚠ Loss detected. Review your stoploss and risk management."
+        );
+      }
+
+      // PROFIT
+
+      if (pnl > 0) {
+
+        reviews.push(
+          "✅ Good trade execution. Maintain discipline and consistency."
+        );
+      }
+
+      // FOMO
+
+      if (
+
+        note.includes(
+          "fomo"
+        ) ||
+
+        note.includes(
+          "fear"
+        ) ||
+
+        note.includes(
+          "early entry"
+        )
+
+      ) {
+
+        reviews.push(
+          "⚠ Emotional/FOMO entry detected. Wait for stronger confirmation before entering."
+        );
+      }
+
+      // REVENGE
+
+      if (
+        note.includes(
+          "revenge"
+        )
+      ) {
+
+        reviews.push(
+          "⚠ Revenge trading behavior detected. Take a break after consecutive losses."
+        );
+      }
+
+      // OVERTRADING
+
+      if (
+        note.includes(
+          "overtrade"
+        ) ||
+
+        note.includes(
+          "too many trades"
+        )
+      ) {
+
+        reviews.push(
+          "⚠ Overtrading detected. Focus on high probability setups only."
+        );
+      }
+
+      // DISCIPLINE
+
+      if (
+        note.includes(
+          "discipline"
+        ) ||
+
+        note.includes(
+          "followed plan"
+        )
+      ) {
+
+        reviews.push(
+          "✅ Good discipline noted. Continue following your trading plan."
+        );
+      }
+
+      // DEFAULT
+
+      if (
+        reviews.length === 0
+      ) {
+
+        reviews.push(
+          "📊 AI could not detect major emotional patterns in this trade."
+        );
+      }
+
+      return reviews;
+    };
+
+  // AI SCORE
+
+  const getAIScore =
+    () => {
+
+      const pnl =
+        Number(
+          trade.net_pnl || 0
+        );
+
+      const note =
+        (
+          trade.note || ""
+        ).toLowerCase();
+
+      let score = 70;
+
+      if (pnl > 0)
+        score += 15;
+
+      if (pnl < 0)
+        score -= 10;
+
+      if (
+        note.includes(
+          "discipline"
+        )
+      ) {
+
+        score += 10;
+      }
+
+      if (
+
+        note.includes(
+          "fomo"
+        ) ||
+
+        note.includes(
+          "revenge"
+        )
+
+      ) {
+
+        score -= 20;
+      }
+
+      // LIMIT
+
+      if (score > 100)
+        score = 100;
+
+      if (score < 0)
+        score = 0;
+
+      return score;
+    };
+
+  const aiScore =
+    getAIScore();
+
   return (
 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
 
       {/* MODAL */}
 
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto animate-in fade-in zoom-in duration-300">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto">
 
         {/* HEADER */}
 
         <div className="sticky top-0 bg-white border-b border-pink-100 px-8 py-5 flex items-center justify-between rounded-t-3xl z-10">
-
-          {/* LEFT */}
 
           <div>
 
@@ -77,7 +282,7 @@ export default function ViewTradeModal({
 
             <p className="text-zinc-500 mt-1">
 
-              Professional visual trading journal
+              Professional AI powered trading journal
 
             </p>
 
@@ -102,7 +307,71 @@ export default function ViewTradeModal({
 
         <div className="p-8 space-y-8">
 
-          {/* TOP CARDS */}
+          {/* AI SCORE */}
+
+          <div className="bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-3xl p-6 text-white shadow-xl">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <h3 className="text-3xl font-bold">
+
+                  AI Trade Score
+
+                </h3>
+
+                <p className="text-white/90 mt-2">
+
+                  AI evaluated your discipline and emotional behavior.
+
+                </p>
+
+              </div>
+
+              <div className="text-6xl font-bold">
+
+                {aiScore}
+
+              </div>
+
+            </div>
+
+            {/* PROGRESS */}
+
+            <div className="mt-5">
+
+              <div className="w-full bg-white/20 rounded-full h-4 overflow-hidden">
+
+                <div
+
+                  className={`h-4 rounded-full
+
+                    ${
+                      aiScore >= 80
+
+                        ? "bg-green-400"
+
+                        : aiScore >= 50
+
+                        ? "bg-yellow-400"
+
+                        : "bg-red-400"
+                    }
+                  `}
+
+                  style={{
+                    width: `${aiScore}%`,
+                  }}
+                />
+
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* TOP GRID */}
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
 
@@ -112,13 +381,13 @@ export default function ViewTradeModal({
 
               <p className="text-sm text-zinc-500">
 
-                Stock Name
+                Stock
 
               </p>
 
               <h3 className="text-2xl font-bold text-zinc-800 mt-2">
 
-                {trade.stock_name || "-"}
+                {trade.stock_name}
 
               </h3>
 
@@ -145,7 +414,7 @@ export default function ViewTradeModal({
                 }
               `}>
 
-                {trade.side || "-"}
+                {trade.side}
 
               </h3>
 
@@ -198,11 +467,11 @@ export default function ViewTradeModal({
 
           </div>
 
-          {/* SECOND GRID */}
+          {/* TRADE INFO */}
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
 
-            {/* QTY */}
+            {/* QUANTITY */}
 
             <div className="bg-white rounded-3xl p-5 border border-pink-100 shadow-sm">
 
@@ -214,7 +483,7 @@ export default function ViewTradeModal({
 
               <h3 className="text-xl font-bold text-zinc-800 mt-2">
 
-                {trade.quantity || 0}
+                {trade.quantity}
 
               </h3>
 
@@ -233,7 +502,7 @@ export default function ViewTradeModal({
               <h3 className="text-xl font-bold text-zinc-800 mt-2">
 
                 ₹
-                {trade.entry_price || 0}
+                {trade.entry_price}
 
               </h3>
 
@@ -264,7 +533,7 @@ export default function ViewTradeModal({
 
               <p className="text-sm text-zinc-500">
 
-                Total Investment
+                Investment
 
               </p>
 
@@ -279,49 +548,41 @@ export default function ViewTradeModal({
 
           </div>
 
-          {/* THIRD GRID */}
+          {/* PNL */}
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
 
-            {/* BROKERAGE */}
+            {/* GROSS */}
 
             <div className="bg-blue-50 rounded-3xl p-5 border border-blue-100">
 
               <p className="text-sm text-zinc-500">
 
-                Brokerage
+                Gross P&L
 
               </p>
 
-              <h3 className="text-xl font-bold text-blue-600 mt-2">
+              <h3 className={`text-xl font-bold mt-2
+
+                ${
+                  Number(
+                    grossPnl
+                  ) >= 0
+
+                    ? "text-green-600"
+
+                    : "text-red-500"
+                }
+              `}>
 
                 ₹
-                {trade.brokerage || 0}
+                {grossPnl}
 
               </h3>
 
             </div>
 
-            {/* TAXES */}
-
-            <div className="bg-blue-50 rounded-3xl p-5 border border-blue-100">
-
-              <p className="text-sm text-zinc-500">
-
-                Taxes
-
-              </p>
-
-              <h3 className="text-xl font-bold text-blue-600 mt-2">
-
-                ₹
-                {trade.taxes || 0}
-
-              </h3>
-
-            </div>
-
-            {/* NET PNL */}
+            {/* NET */}
 
             <div className="bg-blue-50 rounded-3xl p-5 border border-blue-100">
 
@@ -351,23 +612,39 @@ export default function ViewTradeModal({
 
             </div>
 
-            {/* RISK REWARD */}
+            {/* BROKERAGE */}
 
             <div className="bg-blue-50 rounded-3xl p-5 border border-blue-100">
 
               <p className="text-sm text-zinc-500">
 
-                Trade Type
+                Brokerage
 
               </p>
 
-              <h3 className="text-xl font-bold text-violet-600 mt-2">
+              <h3 className="text-xl font-bold text-blue-600 mt-2">
 
-                {trade.side === "BUY"
+                ₹
+                {trade.brokerage || 0}
 
-                  ? "Long"
+              </h3>
 
-                  : "Short"}
+            </div>
+
+            {/* TAX */}
+
+            <div className="bg-blue-50 rounded-3xl p-5 border border-blue-100">
+
+              <p className="text-sm text-zinc-500">
+
+                Taxes
+
+              </p>
+
+              <h3 className="text-xl font-bold text-blue-600 mt-2">
+
+                ₹
+                {trade.taxes || 0}
 
               </h3>
 
@@ -389,7 +666,7 @@ export default function ViewTradeModal({
 
               <div className="bg-pink-100 text-pink-600 px-4 py-2 rounded-2xl text-sm font-semibold">
 
-                Psychology + Setup
+                Psychology Analysis
 
               </div>
 
@@ -399,7 +676,52 @@ export default function ViewTradeModal({
 
               {trade.note ||
 
-                "No notes added for this trade."}
+                "No notes added."}
+
+            </div>
+
+          </div>
+
+          {/* AI REVIEW */}
+
+          <div className="bg-white rounded-3xl border border-violet-100 shadow-sm p-6">
+
+            <div className="flex items-center justify-between mb-5">
+
+              <h3 className="text-2xl font-bold text-zinc-800">
+
+                AI Trade Review
+
+              </h3>
+
+              <div className="bg-violet-100 text-violet-600 px-4 py-2 rounded-2xl text-sm font-semibold">
+
+                AI Engine Active
+
+              </div>
+
+            </div>
+
+            <div className="space-y-4">
+
+              {getAIReview().map(
+                (
+                  review,
+                  index
+                ) => (
+
+                  <div
+
+                    key={index}
+
+                    className="bg-violet-50 border border-violet-100 rounded-2xl p-4 text-zinc-700"
+                  >
+
+                    {review}
+
+                  </div>
+                )
+              )}
 
             </div>
 
@@ -419,9 +741,9 @@ export default function ViewTradeModal({
 
                 </h3>
 
-                <div className="bg-violet-100 text-violet-600 px-4 py-2 rounded-2xl text-sm font-semibold">
+                <div className="bg-blue-100 text-blue-600 px-4 py-2 rounded-2xl text-sm font-semibold">
 
-                  Chart Analysis
+                  Visual Analysis
 
                 </div>
 
@@ -488,30 +810,6 @@ export default function ViewTradeModal({
               </h3>
 
             </div>
-
-          </div>
-
-          {/* FOOTER */}
-
-          <div className="bg-gradient-to-r from-pink-500 to-violet-500 rounded-3xl p-6 text-white">
-
-            <h3 className="text-2xl font-bold mb-3">
-
-              AI Trade Review
-
-            </h3>
-
-            <p className="leading-relaxed text-white/90">
-
-              This section is ready for future AI integration.
-              You can later add:
-              AI mistake detection,
-              emotional analysis,
-              setup grading,
-              strategy scoring,
-              and risk management review.
-
-            </p>
 
           </div>
 
